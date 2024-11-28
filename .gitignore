@@ -1,0 +1,35 @@
+# Python
+__pycache__/
+*.pyc
+*.log
+
+# Database
+backend/stock_manager.db
+
+# Virtual Environment
+venv/
+
+# Node.js and Build Files
+node_modules/
+frontend/build/
+frontend/dist/
+frontend/.cache/
+
+# Environment Files
+.env
+frontend/.env.local
+frontend/.env.development
+
+# Certificates
+sertificates/
+
+# OS-Specific
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Test and Debug
+frontend/src/setupTests.ts
+

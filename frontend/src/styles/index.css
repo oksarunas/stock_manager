@@ -1,0 +1,63 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* Global Adjustments */
+body {
+  @apply bg-primary text-textPrimary;
+  font-family: 'Roboto', sans-serif; /* Match Material UI's default font */
+}
+
+/* Headings */
+h1, h2, h3, h4, h5, h6 {
+  @apply text-textPrimary font-bold leading-tight;
+}
+
+/* Paragraphs */
+p {
+  @apply text-textSecondary;
+}
+
+/* Links */
+a {
+  @apply text-accent hover:underline transition-colors duration-200;
+}
+
+/* Buttons */
+.button-primary {
+  @apply bg-accent text-white py-2 px-4 rounded hover:bg-opacity-90 transition duration-200;
+}
+
+.button-secondary {
+  @apply px-6 py-3 border-2 border-accent text-accent rounded-lg transition transform hover:text-white hover:bg-accent hover:scale-105;
+}
+
+/* Cards */
+.card {
+  @apply bg-secondary shadow-lg rounded-lg p-6;
+}
+
+/* Input Fields */
+.input-field {
+  @apply w-full border bg-primary text-textPrimary rounded px-3 py-2 transition-colors duration-200;
+}
+
+.input-field:focus {
+  @apply outline-none ring-2 ring-accent;
+}
+
+/* Material UI Compatibility Adjustments */
+:root {
+  --mui-palette-primary-main: #4a90e2;
+  --mui-palette-primary-light: #6fb3f5;
+  --mui-palette-primary-contrastText: #ffffff;
+  --mui-palette-text-primary: #e2e8f0;
+  --mui-palette-text-secondary: #a0aec0;
+  --mui-palette-background-default: #1c2536;
+  --mui-palette-background-paper: #2a303c;
+  --mui-palette-divider: #4a5568;
+}
+
+html {
+  scroll-behavior: smooth;
+}

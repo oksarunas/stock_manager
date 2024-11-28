@@ -1,0 +1,28 @@
+{
+  "compilerOptions": {
+    "target": "es6", // Optionally use "esnext" for the latest JavaScript features
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "strict": true,
+    "strictNullChecks": true, // Enables stricter null handling
+    "forceConsistentCasingInFileNames": true,
+    "noFallthroughCasesInSwitch": true,
+    "module": "esnext",
+    "moduleResolution": "node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "react" // Enables the React 17+ JSX Transform
+  },
+  "include": [
+    "src"
+  ]
+}
