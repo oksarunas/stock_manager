@@ -1,44 +1,22 @@
 import React, { useEffect, useState, useCallback } from "react";
-import { fetchPortfolioPerformance } from "../api";
-import { useUser } from "../components/hooks/useUser";
 import {
   Box,
   Typography,
   CircularProgress,
   Button,
-  Card,
-  CardContent,
   Grid,
 } from "@mui/material";
+import { Line } from "react-chartjs-2";
+import { Link } from "react-router-dom";
+import { useTheme } from "@mui/material/styles";
+import { fetchPortfolioPerformance } from "../api";
+import { useUser } from "../components/hooks/useUser";
+import MarketUpdates from "../components/MarketUpdates";
 import { PerformanceResponse, Stock } from "../types/interfaces";
 import apiClient from "../api";
-import { Link } from "react-router-dom";
-import { Line } from "react-chartjs-2";
-
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend,
-} from "chart.js";
-
-import MarketUpdates from "../components/MarketUpdates"; // Import the MarketUpdates component
-
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Title,
-  Tooltip,
-  Legend
-);
 
 const Dashboard = () => {
+  const theme = useTheme();
   const { user } = useUser();
   const [performance, setPerformance] = useState<PerformanceResponse | null>(
     null
@@ -55,29 +33,22 @@ const Dashboard = () => {
       const response = await apiClient.get(`/portfolio/${user.id}`);
       const portfolio: Stock[] = response.data.portfolio;
 
-      // Calculate performance for each stock and update the portfolio
       const updatedPortfolio = portfolio.map((stock) => {
         const currentPrice = stock.current_price ?? 0;
         const performance =
           ((currentPrice - stock.purchase_price) / stock.purchase_price) * 100;
-        return { ...stock, performance }; // Add performance field
+        return { ...stock, performance };
       });
 
       setPortfolio(updatedPortfolio);
 
-      // Determine the top-performing stock
       const bestStock = updatedPortfolio.reduce<Stock | null>(
-        (best, stock) => {
-          if (!best) {
-            return stock;
-          }
-          return (stock.performance ?? 0) > (best.performance ?? 0)
+        (best, stock) =>
+          !best || (stock.performance ?? 0) > (best.performance ?? 0)
             ? stock
-            : best;
-        },
+            : best,
         null
       );
-
       setTopStock(bestStock);
     } catch (error) {
       console.error("Failed to fetch portfolio data:", error);
@@ -88,21 +59,16 @@ const Dashboard = () => {
   }, [user]);
 
   const fetchPerformance = useCallback(async () => {
-    if (portfolio.length === 0) return;
-
+    if (!portfolio.length) return;
     const transformedPortfolio = portfolio.map((stock) => ({
       ticker: stock.ticker,
       quantity: stock.quantity,
       purchase_price: stock.purchase_price,
     }));
-
     try {
       const response = await fetchPortfolioPerformance(transformedPortfolio);
-      if (response.success) {
-        setPerformance(response.data);
-      } else {
-        setError(response.error || "Failed to fetch portfolio performance");
-      }
+      if (response.success) setPerformance(response.data);
+      else setError(response.error || "Failed to fetch portfolio performance");
     } catch (error) {
       console.error("Error fetching performance data:", error);
       setError("Error fetching performance data");
@@ -114,20 +80,10 @@ const Dashboard = () => {
   }, [fetchPortfolio]);
 
   useEffect(() => {
-    if (portfolio.length > 0) {
-      fetchPerformance();
-    }
+    if (portfolio.length) fetchPerformance();
   }, [portfolio, fetchPerformance]);
 
-  useEffect(() => {
-    const interval = setInterval(() => {
-      fetchPortfolio();
-    }, 600000);
-
-    return () => clearInterval(interval);
-  }, [fetchPortfolio]);
-
-  if (loading) {
+  if (loading)
     return (
       <Box
         display="flex"
@@ -138,34 +94,13 @@ const Dashboard = () => {
         <CircularProgress color="primary" size={60} />
       </Box>
     );
-  }
 
-  if (error) {
+  if (error)
     return (
       <Typography color="error" variant="h6" align="center" mt={4}>
         {error}
       </Typography>
     );
-  }
-
-  if (!loading && portfolio.length === 0) {
-    return (
-      <Box display="flex" flexDirection="column" alignItems="center" mt={4}>
-        <Typography variant="h6" color="text.secondary">
-          Your portfolio is currently empty.
-        </Typography>
-        <Button
-          component={Link}
-          to="/trade"
-          variant="contained"
-          color="primary"
-          sx={{ mt: 2 }}
-        >
-          Start Trading
-        </Button>
-      </Box>
-    );
-  }
 
   const chartData = performance
     ? {
@@ -177,10 +112,8 @@ const Dashboard = () => {
               performance.total_investment,
               performance.total_current_value,
             ],
-            backgroundColor: "rgba(75, 192, 192, 0.2)",
             borderColor: "rgba(75, 192, 192, 1)",
-            borderWidth: 2,
-            tension: 0.4, // Smooth curve
+            tension: 0.4,
           },
         ],
       }
@@ -188,108 +121,62 @@ const Dashboard = () => {
 
   return (
     <Box sx={{ p: 4, bgcolor: "background.default", minHeight: "100vh" }}>
-      {/* Header Section */}
-      <Box
-        display="flex"
-        justifyContent="space-between"
-        alignItems="center"
-        mb={4}
-      >
+      <Box display="flex" justifyContent="space-between" alignItems="center" mb={4}>
         <Typography variant="h4" fontWeight="bold">
           Welcome Back, {user?.username || "User"}!
         </Typography>
-        <Button
-          component={Link}
-          to="/trade"
-          variant="contained"
-          color="primary"
-          sx={{
-            px: 4,
-            py: 1.5,
-            borderRadius: "8px",
-            boxShadow: "0 0 10px rgba(59, 130, 246, 0.5)",
-            "&:hover": { backgroundColor: "#2563eb" },
-          }}
-        >
+        <Button component={Link} to="/trade" variant="contained">
           Trade Now
         </Button>
       </Box>
 
-      {/* Market Updates */}
       <MarketUpdates />
 
-      {/* Performance Highlights */}
-      <Box mb={4}>
-        <Card
-          sx={{
-            bgcolor: "#1f2937",
-            boxShadow: "0 0 15px 5px rgba(123, 255, 123, 0.5)",
-            borderRadius: "8px",
-            p: 2,
-          }}
-        >
-          <Typography variant="h6" fontWeight="bold">
-            Top Performing Stock
-          </Typography>
-          {topStock ? (
-            <Typography>
-              {topStock.ticker}: +{topStock.performance?.toFixed(2)}%
-            </Typography>
-          ) : (
-            <Typography>No data available</Typography>
-          )}
-        </Card>
+      <Box sx={{ ...theme.customComponents.BoxStyles, mb: 4 }}>
+        <Typography variant="h6" fontWeight="bold">
+          Top Performing Stock
+        </Typography>
+        <Typography>
+          {topStock
+            ? `${topStock.ticker}: +${topStock.performance?.toFixed(2)}%`
+            : "No data available"}
+        </Typography>
       </Box>
 
-      {/* Cards Section */}
       <Grid container spacing={4}>
         <Grid item xs={12} sm={6}>
-          <Card sx={{ boxShadow: "0 0 15px 5px rgba(59, 130, 246, 0.5)" }}>
-            <CardContent>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
-                Portfolio Performance Summary
-              </Typography>
-              {performance && (
-                <>
-                  <Typography>
-                    Total Investment: $
-                    {performance.total_investment.toFixed(2)}
-                  </Typography>
-                  <Typography>
-                    Total Current Value: $
-                    {performance.total_current_value.toFixed(2)}
-                  </Typography>
-                  <Typography>
-                    ROI:{" "}
-                    <span
-                      style={{
-                        color: performance.roi >= 0 ? "green" : "red",
-                      }}
-                    >
-                      {performance.roi.toFixed(2)}%{" "}
-                      {performance.roi >= 0 ? "▲" : "▼"}
-                    </span>
-                  </Typography>
-                </>
-              )}
-            </CardContent>
-          </Card>
+          <Box sx={{ ...theme.customComponents.BoxStyles }}>
+            <Typography variant="h6" fontWeight="bold" gutterBottom>
+              Portfolio Performance Summary
+            </Typography>
+            {performance && (
+              <>
+                <Typography>
+                  Total Investment: ${performance.total_investment.toFixed(2)}
+                </Typography>
+                <Typography>
+                  Total Current Value: $
+                  {performance.total_current_value.toFixed(2)}
+                </Typography>
+                <Typography>
+                  ROI:{" "}
+                  <span style={{ color: performance.roi >= 0 ? "green" : "red" }}>
+                    {performance.roi.toFixed(2)}%
+                  </span>
+                </Typography>
+              </>
+            )}
+          </Box>
         </Grid>
         <Grid item xs={12} sm={6}>
-          <Card sx={{ boxShadow: "0 0 15px 5px rgba(59, 130, 246, 0.5)" }}>
-            <CardContent>
-              <Typography variant="h6" fontWeight="bold" gutterBottom>
-                Portfolio Value Trend
-              </Typography>
-              <Box sx={{ height: 200 }}>
-                {chartData ? (
-                  <Line data={chartData} />
-                ) : (
-                  <Typography>No data to display</Typography>
-                )}
-              </Box>
-            </CardContent>
-          </Card>
+          <Box sx={{ ...theme.customComponents.BoxStyles }}>
+            <Typography variant="h6" fontWeight="bold" gutterBottom>
+              Portfolio Value Trend
+            </Typography>
+            <Box sx={{ height: 200 }}>
+              {chartData ? <Line data={chartData} /> : <Typography>No data</Typography>}
+            </Box>
+          </Box>
         </Grid>
       </Grid>
     </Box>

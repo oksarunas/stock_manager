@@ -1,4 +1,12 @@
 import React, { useEffect, useState } from "react";
+import {
+  Box,
+  Typography,
+  useTheme,
+  Card,
+  CardContent,
+  CardHeader,
+} from "@mui/material";
 import { DataGrid, GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchTrades } from "../../api";
 import * as Interfaces from "../../types/interfaces";
@@ -12,6 +20,8 @@ const TradesTable: React.FC = () => {
   });
   const [totalCount, setTotalCount] = useState(0);
 
+  const theme = useTheme();
+
   const loadTrades = async () => {
     setLoading(true);
     const response = await fetchTrades(
@@ -19,7 +29,7 @@ const TradesTable: React.FC = () => {
       paginationModel.page * paginationModel.pageSize
     );
     if (response.success && response.data) {
-      const formattedTrades = response.data.trades.map(trade => ({
+      const formattedTrades = response.data.trades.map((trade) => ({
         ...trade,
         timestamp: new Date(trade.timestamp).toLocaleString(),
       }));
@@ -33,7 +43,6 @@ const TradesTable: React.FC = () => {
 
   useEffect(() => {
     loadTrades();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paginationModel]);
 
   const columns: GridColDef[] = [
@@ -48,20 +57,49 @@ const TradesTable: React.FC = () => {
   ];
 
   return (
-    <div style={{ height: 600, width: "100%" }}>
-      <h2>Trades</h2>
-      <DataGrid
-        rows={trades}
-        columns={columns}
-        pagination
-        paginationMode="server"
-        rowCount={totalCount}
-        paginationModel={paginationModel}
-        onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
-        pageSizeOptions={[10, 20, 50]}
-        loading={loading}
+    <Card
+      sx={{
+        boxShadow: 3,
+        borderRadius: 2,
+        bgcolor: "grey.900",
+      }}
+    >
+      <CardHeader
+        title="Trades"
+        sx={{ color: "text.primary" }}
       />
-    </div>
+      <CardContent>
+        <Box sx={{ height: 600, width: "100%" }}>
+          <DataGrid
+            rows={trades}
+            columns={columns}
+            pagination
+            paginationMode="server"
+            rowCount={totalCount}
+            paginationModel={paginationModel}
+            onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
+            pageSizeOptions={[10, 20, 50]}
+            loading={loading}
+            sx={{
+              bgcolor: "grey.900",
+              color: "text.primary",
+              border: "none",
+              "& .MuiDataGrid-columnHeaders": {
+                bgcolor: "grey.800",
+                color: "text.secondary",
+                fontWeight: "bold",
+                borderBottom: `1px solid ${theme.palette.divider}`,
+              },
+              "& .MuiDataGrid-row": {
+                "&:hover": {
+                  bgcolor: "grey.800",
+                },
+              },
+            }}
+          />
+        </Box>
+      </CardContent>
+    </Card>
   );
 };
 

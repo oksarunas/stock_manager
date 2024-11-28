@@ -1,10 +1,20 @@
 import React, { useEffect, useState } from "react";
+import {
+  Box,
+  Typography,
+  useTheme,
+  Card,
+  CardContent,
+  CardHeader,
+} from "@mui/material";
 import { fetchTradeSummary } from "../../api";
 import * as Interfaces from "../../types/interfaces";
 
 const TradeSummary: React.FC = () => {
   const [summary, setSummary] = useState<Interfaces.TradeSummary | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const theme = useTheme();
 
   useEffect(() => {
     const fetchSummary = async () => {
@@ -21,21 +31,66 @@ const TradeSummary: React.FC = () => {
   }, []);
 
   if (error) {
-    return <div>{error}</div>;
+    return (
+      <Box
+        sx={{
+          p: 2,
+          bgcolor: theme.palette.error.main,
+          borderRadius: theme.shape.borderRadius,
+          color: theme.palette.error.contrastText,
+        }}
+      >
+        <Typography variant="body1">{error}</Typography>
+      </Box>
+    );
   }
 
   if (!summary) {
-    return <div>Loading...</div>;
+    return (
+      <Box
+        sx={{
+          p: 2,
+          bgcolor: theme.palette.background.paper,
+          borderRadius: theme.shape.borderRadius,
+          color: theme.palette.text.primary,
+          textAlign: "center",
+        }}
+      >
+        <Typography variant="body1">Loading...</Typography>
+      </Box>
+    );
   }
 
   return (
-    <div>
-      <h2>Trade Summary</h2>
-      <p>Total Trades: {summary.total_trades}</p>
-      <p>Total Realized Profit: ${summary.total_realized_profit.toFixed(2)}</p>
-      <p>Max Budget Used: ${summary.budget_used.toFixed(2)}</p>
-      <p>Last 24h Profit: ${summary.last_24h_profit.toFixed(2)}</p>
-    </div>
+    <Card
+      sx={{
+        boxShadow: 3,
+        borderRadius: 2,
+        bgcolor: "grey.900",
+        mb: 4,
+      }}
+    >
+      <CardHeader
+        title="Trade Summary"
+        sx={{ color: "text.primary" }}
+      />
+      <CardContent>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+            <strong>Total Trades:</strong> {summary.total_trades}
+          </Typography>
+          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+            <strong>Total Realized Profit:</strong> ${summary.total_realized_profit.toFixed(2)}
+          </Typography>
+          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+            <strong>Max Budget Used:</strong> ${summary.budget_used.toFixed(2)}
+          </Typography>
+          <Typography variant="body1" sx={{ color: 'text.secondary' }}>
+            <strong>Last 24h Profit:</strong> ${summary.last_24h_profit.toFixed(2)}
+          </Typography>
+        </Box>
+      </CardContent>
+    </Card>
   );
 };
 

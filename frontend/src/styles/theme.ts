@@ -4,16 +4,18 @@ const glowEffect = (color: string) => `0 0 15px 5px ${color}`;
 
 const theme = createTheme({
   palette: {
-    primary: { main: "#3b82f6" }, // Blue
-    secondary: { main: "#1f2937" }, // Gray
-    error: { main: "#ff1744" }, // Red for errors
+    primary: { main: "#3b82f6" },
+    secondary: { main: "#1f2937" },
+    error: { main: "#ff1744" },
+    success: { main: "#4caf50" }, // For profit/loss indicators
+    warning: { main: "#ff9800" },
     background: {
-      default: "#1f2937", // Dark background
+      default: "#1f2937", // Page background
       paper: "#424B5A", // Card background
     },
     text: {
-      primary: "#e5e7eb", // White text
-      secondary: "#9ca3af", // Gray text
+      primary: "#e5e7eb", // Bright text
+      secondary: "#9ca3af", // Muted gray text
     },
   },
   typography: {
@@ -31,12 +33,13 @@ const theme = createTheme({
     MuiButton: {
       styleOverrides: {
         root: {
-          backgroundColor: "#3b82f6", // Tailwind blue
-          color: "#e5e7eb", // White text
+          backgroundColor: "#3b82f6",
+          color: "#e5e7eb",
           padding: "0.5rem 1rem",
+          borderRadius: "8px",
           "&:hover": {
             backgroundColor: "#2563eb",
-            boxShadow: glowEffect("rgba(59, 130, 246, 0.5)"), // Blue glow
+            boxShadow: glowEffect("rgba(59, 130, 246, 0.5)"),
           },
         },
       },
@@ -47,31 +50,50 @@ const theme = createTheme({
           backgroundColor: "#424B5A",
           color: "#e5e7eb",
           borderRadius: "8px",
-          boxShadow: "0 0 15px 5px rgba(59, 130, 246, 0.5)", // Default blue glow
+          boxShadow: "0 0 15px rgba(59, 130, 246, 0.5)",
           transition: "transform 0.3s ease, box-shadow 0.3s ease",
           "&:hover": {
             transform: "scale(1.02)",
-            boxShadow: "0 0 30px 10px rgba(59, 130, 246, 0.6)", // Enhanced hover glow
+            boxShadow: "0 0 30px 10px rgba(59, 130, 246, 0.7)",
           },
         },
       },
     },
-    MuiContainer: {
+    MuiTable: {
       styleOverrides: {
         root: {
-          padding: "2rem",
-          backgroundColor: "#424B5A",
+          backgroundColor: "#1a1a1a",
+          color: "#e5e7eb",
           borderRadius: "8px",
-          boxShadow: glowEffect("rgba(59, 130, 246, 0.5)"), // Blue glow
+          "& th": {
+            color: "#e5e7eb", // Header color
+            fontWeight: 700,
+          },
+          "& tr:nth-of-type(even)": {
+            backgroundColor: "#1a1a1a", // Alternate row color
+          },
         },
       },
     },
     MuiTypography: {
       styleOverrides: {
         h5: {
-          color: "inherit", // Inherit color for better flexibility
-          fontWeight: 700, // Make titles bold
+          color: "inherit",
+          fontWeight: 700,
         },
+      },
+    },
+  },
+  customComponents: {
+    BoxStyles: {
+      padding: "16px",
+      borderRadius: "8px",
+      backgroundColor: "#424B5A",
+      boxShadow: "0 0 15px rgba(59, 130, 246, 0.5)",
+      transition: "transform 0.3s ease, box-shadow 0.3s ease",
+      "&:hover": {
+        transform: "scale(1.02)",
+        boxShadow: "0 0 30px rgba(59, 130, 246, 0.7)",
       },
     },
   },
