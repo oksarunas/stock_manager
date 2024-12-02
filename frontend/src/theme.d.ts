@@ -14,6 +14,15 @@ declare module "@mui/material/styles" {
           boxShadow?: string;
         };
       };
+      HeaderStyles?: {
+        backgroundColor: string;
+        color: string;
+        textAlign: string;
+        padding: string;
+        "&:hover"?: {
+          backgroundColor?: string;
+        };
+      };
     };
   }
 
@@ -29,6 +38,15 @@ declare module "@mui/material/styles" {
         "&:hover"?: {
           transform?: string;
           boxShadow?: string;
+        };
+      };
+      HeaderStyles?: {
+        backgroundColor?: string;
+        color?: string;
+        textAlign?: string;
+        padding?: string;
+        "&:hover"?: {
+          backgroundColor?: string;
         };
       };
     };

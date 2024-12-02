@@ -6,8 +6,10 @@ import { BrowserRouter } from 'react-router-dom';
 import { App } from './routes/App';
 import { UserProvider } from './contexts/UserContext';
 import { RefreshProvider } from './contexts/RefreshContext';
-import { ThemeProvider, CssBaseline } from '@mui/material'; // Import CssBaseline for global Material UI resets
-import theme from './styles/theme'; // Import your custom Material UI theme
+import { ThemeProvider, CssBaseline } from '@mui/material';
+import theme from './styles/theme';
+import { Box } from '@mui/system';
+import Snowflakes from './components/christmas/Snowflakes'; // Import the Snowflakes component
 
 const root = ReactDOM.createRoot(
   document.getElementById('root') as HTMLElement
@@ -15,8 +17,8 @@ const root = ReactDOM.createRoot(
 
 root.render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}> {/* Wrap in ThemeProvider for Material UI theme */}
-      <CssBaseline /> {/* Apply Material UI's default CSS baseline reset */}
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
       <UserProvider>
         <RefreshProvider>
           <BrowserRouter>
@@ -24,6 +26,25 @@ root.render(
           </BrowserRouter>
         </RefreshProvider>
       </UserProvider>
+      {/* Festive Christmas Banner at the Bottom */}
+      <Box
+        sx={{
+          backgroundColor: "#e57373", // Softer red
+          color: "#fff",
+          textAlign: "center",
+          padding: "10px",
+          fontSize: "1.25rem",
+          fontWeight: "bold",
+          zIndex: 1200,
+          position: "fixed",
+          width: "100%",
+          bottom: 0, // Position the banner at the bottom
+        }}
+      >
+        🎄 Happy Holidays! Enjoy the Festive Season! 🎅
+      </Box>
+      {/* Snowflake Animation */}
+      <Snowflakes />
     </ThemeProvider>
   </React.StrictMode>
 );

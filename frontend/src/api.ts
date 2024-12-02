@@ -241,5 +241,15 @@ export const fetchTradeSummary = async (): Promise<Interfaces.ApiResponse<Interf
 };  
 
 
+export const fetchPortfolioTrend = async (userId: number): Promise<Interfaces.PortfolioTrendResponse> => {
+  try {
+    const response = await axios.get<Interfaces.PortfolioTrendResponse>(`/api/portfolio/trend/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Failed to fetch portfolio trend:', error);
+    throw error;
+  }
+};
+
 
 export default axiosInstance;

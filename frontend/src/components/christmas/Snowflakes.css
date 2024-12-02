@@ -1,0 +1,25 @@
+/* src/components/christmas/Snowflakes.css */
+
+/* Keyframes for falling motion */
+@keyframes fall {
+    0% {
+      transform: translateY(-100%) translateX(0);
+      opacity: 0.8;
+    }
+    100% {
+      transform: translateY(100vh) translateX(20px);
+      opacity: 0.1;
+    }
+  }
+  
+  /* Snowflake Style */
+  .snowflake {
+    position: fixed;
+    top: -10%;
+    color: #ffffff;
+    z-index: 999;
+    pointer-events: none;
+    animation: fall linear infinite;
+    opacity: 0.6;
+  }
+  

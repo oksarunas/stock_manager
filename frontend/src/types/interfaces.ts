@@ -238,3 +238,16 @@ export interface UserRegistration {
 export interface UserProfileResponse {
   user: User;
 }
+
+
+export interface PortfolioTrendEntry {
+  date: string; // Ensure it's compatible with the backend's date format
+  portfolio_value: number;
+  daily_return?: number | null;
+}
+
+export interface PortfolioTrendResponse {
+  message: string;
+  user_id: number;
+  trend: PortfolioTrendEntry[];
+}

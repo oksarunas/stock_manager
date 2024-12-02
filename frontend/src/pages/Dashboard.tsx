@@ -9,20 +9,19 @@ import {
 import { Line } from "react-chartjs-2";
 import { Link } from "react-router-dom";
 import { useTheme } from "@mui/material/styles";
-import { fetchPortfolioPerformance } from "../api";
+import { fetchPortfolioPerformance, fetchPortfolioTrend } from "../api";
 import { useUser } from "../components/hooks/useUser";
 import MarketUpdates from "../components/MarketUpdates";
-import { PerformanceResponse, Stock } from "../types/interfaces";
+import { PerformanceResponse, Stock, PortfolioTrendEntry } from "../types/interfaces";
 import apiClient from "../api";
 
-const Dashboard = () => {
+const Dashboard: React.FC = () => {
   const theme = useTheme();
   const { user } = useUser();
-  const [performance, setPerformance] = useState<PerformanceResponse | null>(
-    null
-  );
+  const [performance, setPerformance] = useState<PerformanceResponse | null>(null);
   const [portfolio, setPortfolio] = useState<Stock[]>([]);
   const [topStock, setTopStock] = useState<Stock | null>(null);
+  const [trendData, setTrendData] = useState<PortfolioTrendEntry[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -58,14 +57,28 @@ const Dashboard = () => {
     }
   }, [user]);
 
+  const fetchPortfolioTrendData = useCallback(async () => {
+    if (!user?.id) return;
+    setLoading(true);
+    try {
+      const response = await fetchPortfolioTrend(user.id);
+      setTrendData(response.trend);
+    } catch (error) {
+      console.error("Failed to fetch portfolio trend data:", error);
+      setError("Failed to fetch portfolio trend data");
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
   const fetchPerformance = useCallback(async () => {
     if (!portfolio.length) return;
-    const transformedPortfolio = portfolio.map((stock) => ({
-      ticker: stock.ticker,
-      quantity: stock.quantity,
-      purchase_price: stock.purchase_price,
-    }));
     try {
+      const transformedPortfolio = portfolio.map((stock) => ({
+        ticker: stock.ticker,
+        quantity: stock.quantity,
+        purchase_price: stock.purchase_price,
+      }));
       const response = await fetchPortfolioPerformance(transformedPortfolio);
       if (response.success) setPerformance(response.data);
       else setError(response.error || "Failed to fetch portfolio performance");
@@ -77,7 +90,8 @@ const Dashboard = () => {
 
   useEffect(() => {
     fetchPortfolio();
-  }, [fetchPortfolio]);
+    fetchPortfolioTrendData();
+  }, [fetchPortfolio, fetchPortfolioTrendData]);
 
   useEffect(() => {
     if (portfolio.length) fetchPerformance();
@@ -102,22 +116,22 @@ const Dashboard = () => {
       </Typography>
     );
 
-  const chartData = performance
-    ? {
-        labels: ["Investment", "Current Value"],
-        datasets: [
-          {
-            label: "Portfolio Value",
-            data: [
-              performance.total_investment,
-              performance.total_current_value,
-            ],
-            borderColor: "rgba(75, 192, 192, 1)",
-            tension: 0.4,
-          },
-        ],
-      }
-    : null;
+  const today = new Date().toISOString().split("T")[0];
+  const filteredTrendData = trendData.filter((entry) => entry.date !== today);
+
+  const chartData = {
+    labels: filteredTrendData.map((entry) => entry.date),
+    datasets: [
+      {
+        label: "Portfolio Value",
+        data: filteredTrendData.map((entry) => entry.portfolio_value),
+        borderColor: "rgba(75, 192, 192, 1)",
+        backgroundColor: "rgba(75, 192, 192, 0.2)",
+        tension: 0.4,
+        fill: true,
+      },
+    ],
+  };
 
   return (
     <Box sx={{ p: 4, bgcolor: "background.default", minHeight: "100vh" }}>
@@ -173,8 +187,12 @@ const Dashboard = () => {
             <Typography variant="h6" fontWeight="bold" gutterBottom>
               Portfolio Value Trend
             </Typography>
-            <Box sx={{ height: 200 }}>
-              {chartData ? <Line data={chartData} /> : <Typography>No data</Typography>}
+            <Box sx={{ height: 300 }}>
+              {filteredTrendData.length > 0 ? (
+                <Line data={chartData} />
+              ) : (
+                <Typography>No data available</Typography>
+              )}
             </Box>
           </Box>
         </Grid>
