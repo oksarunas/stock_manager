@@ -33,3 +33,4 @@ Thumbs.db
 # Test and Debug
 frontend/src/setupTests.ts
 
+backend/bot_state.json

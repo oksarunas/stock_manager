@@ -4,12 +4,12 @@ import math
 import csv
 import os
 import pytz
-from datetime import datetime
+import json
+from datetime import datetime, time as datetime_time
 import logging
 from sqlalchemy.orm import Session
 from database import engine
-from models import Trades
-
+from models import Trade
 
 # Configure logging
 logging.basicConfig(
@@ -19,6 +19,7 @@ logging.basicConfig(
 )
 
 # Global Variables
+state_file = "bot_state.json"  # File to store the bot's state
 budget = 1000000  # $1,000,000 initial budget
 ticker = 'ES=F'
 price_increment = 10  # Use $10 increments
@@ -30,6 +31,60 @@ positions = []          # Each entry is {'buy_price': price, 'quantity': qty}
 occupied_prices = set() # To track price levels that are occupied
 prev_price_cents = None
 total_profit_loss = 0.0
+
+def save_state():
+    """Save the bot's current state to a JSON file."""
+    global buy_orders, sell_orders, positions, budget, total_profit_loss, occupied_prices
+    state = {
+        "buy_orders": buy_orders,
+        "sell_orders": sell_orders,
+        "positions": positions,
+        "budget": budget,
+        "total_profit_loss": total_profit_loss,
+        "occupied_prices": list(occupied_prices),
+        "prev_price_cents": prev_price_cents
+    }
+    try:
+        with open(state_file, "w") as f:
+            json.dump(state, f)
+        logging.info("Bot state saved successfully.")
+    except Exception as e:
+        logging.error(f"Failed to save state: {e}")
+
+def load_state():
+    """Load the bot's state from a JSON file."""
+    global buy_orders, sell_orders, positions, budget, total_profit_loss, occupied_prices, prev_price_cents
+    if os.path.exists(state_file):
+        try:
+            with open(state_file, "r") as f:
+                state = json.load(f)
+            buy_orders = state.get("buy_orders", [])
+            sell_orders = state.get("sell_orders", [])
+            positions = state.get("positions", [])
+            budget = state.get("budget", 1000000)  # Default initial budget
+            total_profit_loss = state.get("total_profit_loss", 0.0)
+            occupied_prices = set(state.get("occupied_prices", []))
+            prev_price_cents = state.get("prev_price_cents", None)
+            logging.info("Bot state loaded successfully.")
+        except Exception as e:
+            logging.error(f"Failed to load state: {e}")
+            # Initialize default values if loading fails
+            buy_orders = []
+            sell_orders = []
+            positions = []
+            occupied_prices = set()
+            budget = 1000000
+            total_profit_loss = 0.0
+            prev_price_cents = None
+    else:
+        # Initialize default values if no state file exists
+        buy_orders = []
+        sell_orders = []
+        positions = []
+        occupied_prices = set()
+        budget = 1000000
+        total_profit_loss = 0.0
+        prev_price_cents = None
 
 def log_trade(timestamp, action, price, quantity, budget, profit_loss):
     """Log trade details to the database."""
@@ -53,15 +108,37 @@ def log_trade(timestamp, action, price, quantity, budget, profit_loss):
     except Exception as e:
         logging.error(f"Failed to log trade: {e}")
 
-
 def is_market_open():
-    """Check if the market is currently open."""
+    """Check if the market is currently open based on futures trading hours."""
     tz = pytz.timezone('US/Eastern')
     now = datetime.now(tz)
-    if now.weekday() >= 5:  # Saturday or Sunday
+    current_weekday = now.weekday()
+    current_time = now.time()
+
+    # Debug log
+    logging.debug(f"Checking market open status - Time: {now}, Weekday: {current_weekday}")
+
+    if current_weekday == 6:  # Sunday
+        if current_time >= time(18, 0):
+            logging.debug("Market is open (Sunday evening).")
+            return True
+        else:
+            logging.debug("Market is closed (Sunday before 6 PM).")
+            return False
+    elif current_weekday == 4:  # Friday
+        if current_time < time(17, 0):
+            logging.debug("Market is open (Friday before 5 PM).")
+            return True
+        else:
+            logging.debug("Market is closed (Friday after 5 PM).")
+            return False
+    elif current_weekday in {0, 1, 2, 3}:  # Monday to Thursday
+        logging.debug("Market is open (Monday to Thursday).")
+        return True
+    else:  # Saturday
+        logging.debug("Market is closed (Saturday).")
         return False
-    # Futures markets have extended hours
-    return True  # For futures like NQ=F, the market is open almost 24/5
+
 
 def fetch_latest_data():
     """Fetch the latest price and timestamp from yfinance."""
@@ -181,7 +258,6 @@ def execute_sell_orders(current_price, current_time):
                 f"Time: {current_time} - Price level ${original_buy_price} is now unoccupied."
             )
 
-
 def print_status(current_time, current_price):
     """Print the current status of orders and positions."""
     print(f"\nTime: {current_time} - Current Price: ${current_price:.2f}")
@@ -198,6 +274,8 @@ def main():
     """Main function to run the trading bot."""
     global prev_price_cents
 
+    # Load state from storage
+    load_state()
 
     while True:
         try:
@@ -243,6 +321,9 @@ def main():
 
             # Print status
             print_status(current_time, current_price)
+
+            # Save state periodically (after significant actions)
+            save_state()
 
             time.sleep(15)
 
