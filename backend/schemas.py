@@ -1,6 +1,6 @@
 from pydantic import BaseModel, Field
 from typing import Literal, Optional, List
-from datetime import datetime
+from datetime import datetime, date
 
 # User-related schemas
 class UserCreate(BaseModel):
@@ -101,3 +101,14 @@ class PortfolioAnalysisResponse(BaseModel):
     sectors: List[SectorDistribution]
     sp500_comparison: SP500Comparison
     suggestions: List[str]
+
+
+class PortfolioTrendEntry(BaseModel):
+    date: date
+    portfolio_value: float
+    daily_return: Optional[float] = None
+
+class PortfolioTrendResponse(BaseModel):
+    message: str
+    user_id: int
+    trend: List[PortfolioTrendEntry]

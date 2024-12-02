@@ -21,7 +21,7 @@ logging.basicConfig(
 # Global Variables
 state_file = "bot_state.json"  # File to store the bot's state
 budget = 1000000  # $1,000,000 initial budget
-ticker = 'ES=F'
+ticker = 'NQ=F'
 price_increment = 10  # Use $10 increments
 
 # Initialize state variables
@@ -93,7 +93,7 @@ def log_trade(timestamp, action, price, quantity, budget, profit_loss):
     try:
         with Session(engine) as session:
             # Add trade record to the database
-            trade = Trades(
+            trade = Trade(
                 timestamp=datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S"),
                 action=action,
                 ticker=ticker,

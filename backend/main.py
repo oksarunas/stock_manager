@@ -64,13 +64,13 @@ app.add_middleware(
 async def add_csp_header(request: Request, call_next):
     response = await call_next(request)
     response.headers["Content-Security-Policy"] = (
-        "default-src 'self'; "  
-        "script-src 'self' 'unsafe-inline' https://*.tradingview.com; "  
-        "frame-src 'self' https://s3.tradingview.com https://cdn.tradingview.com; "  
-        "connect-src 'self'; "  
-        "img-src 'self' data: https://*.tradingview.com; "  
-        "style-src 'self' 'unsafe-inline' https://*.tradingview.com; "  
-        "font-src 'self' https://*.tradingview.com;"  
+        "default-src 'self'; "
+        "script-src 'self' 'unsafe-inline' https://*.tradingview.com https://cdn.jsdelivr.net; "
+        "frame-src 'self' https://s3.tradingview.com https://cdn.tradingview.com; "
+        "connect-src 'self'; "
+        "img-src 'self' data: https://*.tradingview.com https://cdn.jsdelivr.net; "
+        "style-src 'self' 'unsafe-inline' https://*.tradingview.com https://cdn.jsdelivr.net; "
+        "font-src 'self' https://*.tradingview.com https://cdn.jsdelivr.net;"
     )
     return response
 # Middleware to log requests and responses

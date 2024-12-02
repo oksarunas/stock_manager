@@ -3,7 +3,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from typing import List
 from database import get_db
-from models import User, UserStock
+from models import User, UserStock, PortfolioPerformance
 from schemas import (
     PortfolioEntry,
     PortfolioResponse,
@@ -12,6 +12,8 @@ from schemas import (
     PortfolioWeight,
     SectorDistribution,
     SP500Comparison,
+    PortfolioTrendResponse,
+    PortfolioTrendEntry,
 )
 from market import get_current_price, fetch_stock_sector
 from performance import fetch_sp500_performance, generate_diversification_suggestions
@@ -255,3 +257,41 @@ async def calculate_portfolio_return(portfolio_records: list, sp500_performance:
 
     # Calculate the return as a percentage
     return ((total_current_value - total_invested) / total_invested) * 100
+
+
+
+@router.get("/trend/{user_id}", response_model=PortfolioTrendResponse)
+async def get_portfolio_trend(user_id: int, session: AsyncSession = Depends(get_db)):
+    """
+    Retrieve the portfolio performance trend for the given user, day by day.
+    """
+    try:
+        # Fetch performance records for the user, ordered by date
+        result = await session.execute(
+            select(PortfolioPerformance.date, PortfolioPerformance.portfolio_value, PortfolioPerformance.daily_return)
+            .where(PortfolioPerformance.user_id == user_id)
+            .order_by(PortfolioPerformance.date)
+        )
+        performance_records = result.all()
+
+        # Format the data into a list of trend entries
+        trend_entries = [
+            PortfolioTrendEntry(
+                date=record.date,
+                portfolio_value=record.portfolio_value,
+                daily_return=record.daily_return,
+            )
+            for record in performance_records
+        ]
+
+        if not trend_entries:
+            raise HTTPException(status_code=404, detail="No portfolio performance data found")
+
+        return PortfolioTrendResponse(
+            message="Portfolio trend retrieved successfully",
+            user_id=user_id,
+            trend=trend_entries,
+        )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch portfolio trend: {str(e)}")
