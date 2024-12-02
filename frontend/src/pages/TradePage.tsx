@@ -1,4 +1,4 @@
-"use client";
+//src/pages/TradePage.tsx
 
 import React from "react";
 import BuyStockForm from "../components/transactions/BuyStockForm";
@@ -40,6 +40,7 @@ const TradePage: React.FC = () => {
           maxWidth: "1200px",
         }}
       >
+        {/* Buy Stock Card */}
         <Card
           sx={{
             flex: 1,
@@ -53,7 +54,14 @@ const TradePage: React.FC = () => {
             },
           }}
         >
-          <CardContent>
+          <CardContent
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
             <Typography
               variant="h5"
               align="center"
@@ -61,7 +69,6 @@ const TradePage: React.FC = () => {
               sx={{
                 color: "primary.main",
                 fontWeight: "bold",
-                mb: 3,
               }}
             >
               Buy Stock
@@ -70,6 +77,7 @@ const TradePage: React.FC = () => {
           </CardContent>
         </Card>
 
+        {/* Sell Stock Card */}
         <Card
           sx={{
             flex: 1,
@@ -83,7 +91,14 @@ const TradePage: React.FC = () => {
             },
           }}
         >
-          <CardContent>
+          <CardContent
+            sx={{
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: 2,
+            }}
+          >
             <Typography
               variant="h5"
               align="center"
@@ -91,7 +106,6 @@ const TradePage: React.FC = () => {
               sx={{
                 color: "error.main",
                 fontWeight: "bold",
-                mb: 3,
               }}
             >
               Sell Stock

@@ -2,63 +2,43 @@ import React, { useEffect, useState, useContext } from "react";
 import { viewPortfolio, sellStock } from "../../api";
 import { RefreshContext } from "../../contexts/RefreshContext";
 import { useUser } from "../hooks/useUser";
-import {
-  Box,
-  Button,
-  Typography,
-  TextField,
-  Select,
-  MenuItem,
-  FormControl,
-  InputLabel,
-  CircularProgress,
-} from "@mui/material";
-
-interface UserStock {
-  ticker: string;
-  quantity: number;
-}
+import { Box, Button, Typography, TextField, CircularProgress } from "@mui/material";
 
 const SellStockForm: React.FC = () => {
-  // States
-  const [userStocks, setUserStocks] = useState<UserStock[]>([]);
-  const [selectedTicker, setSelectedTicker] = useState<string>("");
+  const [userStocks, setUserStocks] = useState<{ ticker: string; quantity: number }[]>([]);
+  const [ticker, setTicker] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
 
-  // Context and User
   const { triggerRefresh } = useContext(RefreshContext);
   const { user, loading: userLoading, error: userError } = useUser();
 
-  // Fetch user stocks
   useEffect(() => {
-    const fetchUserStocks = async () => {
+    const fetchStocks = async () => {
       if (!user?.id) {
         setError("User ID is required to view portfolio.");
         return;
       }
-
       try {
         const response = await viewPortfolio(user.id);
-        if (response.success && response.data) {
-          setUserStocks(response.data.portfolio);
+        if (response.success) {
+          setUserStocks(response.data?.portfolio || []);
           setError("");
         } else {
+          setError(response.error || "Failed to load your portfolio.");
           setUserStocks([]);
-          setError("Failed to load your portfolio.");
         }
-      } catch (err: any) {
-        setError(err.message || "An error occurred while fetching your portfolio.");
-        console.error("Failed to load user stocks:", err);
+      } catch (err) {
+        setError("An error occurred while fetching your portfolio.");
+        setUserStocks([]);
+        console.error(err);
       }
     };
-
-    if (user?.id) fetchUserStocks();
+    fetchStocks();
   }, [user?.id, triggerRefresh]);
 
-  // Clear notifications after 5 seconds
   useEffect(() => {
     if (message || error) {
       const timer = setTimeout(() => {
@@ -69,69 +49,51 @@ const SellStockForm: React.FC = () => {
     }
   }, [message, error]);
 
-  // Validate and handle stock selling
   const handleSell = async () => {
     if (!validateForm()) return;
 
     setLoading(true);
-    setMessage("");
     setError("");
 
     try {
-      const response = await sellStock(user!.id, selectedTicker, quantity);
+      const response = await sellStock(user!.id, ticker, quantity);
       if (response.success) {
-        setMessage("Stock sold successfully.");
+        setMessage("Stock sold successfully!");
         resetForm();
         triggerRefresh();
       } else {
-        setError(response.error || "Failed to sell stock.");
+        setError("Failed to sell stock.");
       }
-    } catch (err: any) {
-      setError(err.message || "An error occurred while selling stock.");
-      console.error("Sell stock error:", err);
+    } catch (err) {
+      setError("An error occurred while selling stock.");
+      console.error(err);
     } finally {
       setLoading(false);
     }
   };
 
-  // Form validation
   const validateForm = (): boolean => {
-    if (!user) {
-      setError("User is not available. Please log in again.");
+    if (!ticker.trim()) {
+      setError("Please enter a valid ticker symbol.");
       return false;
     }
-
-    if (!selectedTicker) {
-      setError("Please select a stock to sell.");
+    const stock = userStocks.find((s) => s.ticker === ticker);
+    if (!stock || quantity > stock.quantity) {
+      setError("Insufficient stock quantity to sell.");
       return false;
     }
-
-    const stock = userStocks.find((s) => s.ticker === selectedTicker);
-    if (!stock) {
-      setError("Selected stock not found in your portfolio.");
-      return false;
-    }
-
     if (quantity <= 0) {
       setError("Quantity must be at least 1.");
       return false;
     }
-
-    if (quantity > stock.quantity) {
-      setError(`You cannot sell more than you own (${stock.quantity}).`);
-      return false;
-    }
-
     return true;
   };
 
-  // Reset form
   const resetForm = () => {
-    setSelectedTicker("");
+    setTicker("");
     setQuantity(1);
   };
 
-  // Render loading and error states
   if (userLoading) {
     return (
       <Box display="flex" justifyContent="center" mt={10}>
@@ -148,81 +110,55 @@ const SellStockForm: React.FC = () => {
     );
   }
 
-  // Component UI
   return (
-    <Box>
-      <FormControl fullWidth margin="normal">
-        <InputLabel>Select Stock</InputLabel>
-        <Select
-          value={selectedTicker}
-          onChange={(e) => setSelectedTicker(e.target.value as string)}
-          disabled={loading || userStocks.length === 0}
-        >
-          <MenuItem value="">
-            <em>-- Select Stock --</em>
-          </MenuItem>
-          {userStocks.map((stock) => (
-            <MenuItem key={stock.ticker} value={stock.ticker}>
-              {stock.ticker} (Owned: {stock.quantity})
-            </MenuItem>
-          ))}
-        </Select>
-      </FormControl>
-
-      {selectedTicker && (
-        <TextField
-          label="Quantity"
-          type="number"
-          value={quantity}
-          onChange={(e) => setQuantity(Number(e.target.value))}
-          fullWidth
-          margin="normal"
-          inputProps={{
-            min: 1,
-            max: userStocks.find((stock) => stock.ticker === selectedTicker)?.quantity || 1,
-          }}
-          disabled={loading}
-        />
-      )}
-
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+        width: "100%",
+        maxWidth: "400px",
+        margin: "auto",
+      }}
+    >
+      <TextField
+        label="Ticker Symbol"
+        variant="outlined"
+        fullWidth
+        value={ticker}
+        onChange={(e) => setTicker(e.target.value)}
+        placeholder="e.g., AAPL"
+        disabled={loading}
+      />
+      <TextField
+        label="Quantity"
+        type="number"
+        variant="outlined"
+        fullWidth
+        value={quantity}
+        onChange={(e) => setQuantity(Number(e.target.value))}
+        disabled={loading}
+        inputProps={{ min: 1 }}
+      />
+      <Button
+        onClick={handleSell}
+        variant="contained"
+        color="error"
+        disabled={loading}
+        fullWidth
+      >
+        {loading ? "Processing..." : "Sell"}
+      </Button>
       {message && (
-        <Typography color="success.main" sx={{ mt: 2, textAlign: "center" }}>
+        <Typography color="success.main" align="center">
           {message}
         </Typography>
       )}
       {error && (
-        <Typography color="error.main" sx={{ mt: 2, textAlign: "center" }}>
+        <Typography color="error.main" align="center">
           {error}
         </Typography>
       )}
-
-        <Button
-          onClick={handleSell}
-          variant="contained"
-          color="primary"
-          fullWidth
-          disabled={!selectedTicker || loading || userStocks.length === 0}
-          sx={{
-            mt: 2,
-            backgroundColor: !selectedTicker ? "grey.700" : "primary.main", // Grey background when disabled
-            color: !selectedTicker ? "grey.400" : "white", // Light grey text when disabled
-            "&:hover": {
-              backgroundColor: !selectedTicker ? "grey.700" : "primary.dark", // No hover effect when disabled
-            },
-            px: 4,
-            py: 1.5,
-            fontSize: "1rem",
-            borderRadius: "8px",
-            boxShadow: !selectedTicker
-              ? "none" // No shadow when disabled
-              : "0 0 10px rgba(59, 130, 246, 0.5)", // Blue glow when enabled
-            transition: "background-color 0.3s ease, box-shadow 0.3s ease", // Smooth transitions
-          }}
-        >
-          {loading ? "Processing..." : "Sell"}
-        </Button>
-
-
     </Box>
   );
 };

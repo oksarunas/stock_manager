@@ -85,7 +85,16 @@ const BuyStockForm: React.FC = () => {
   }
 
   return (
-    <Box>
+    <Box
+      sx={{
+        display: "flex",
+        flexDirection: "column",
+        gap: 2,
+        width: "100%",
+        maxWidth: "400px",
+        margin: "auto",
+      }}
+    >
       <TextField
         label="Ticker Symbol"
         variant="outlined"
@@ -94,7 +103,6 @@ const BuyStockForm: React.FC = () => {
         onChange={(e) => setTicker(e.target.value)}
         placeholder="e.g., AAPL"
         disabled={loading}
-        sx={{ mb: 3 }}
       />
       <TextField
         label="Quantity"
@@ -106,26 +114,25 @@ const BuyStockForm: React.FC = () => {
         disabled={loading}
         inputProps={{ min: 1 }}
       />
-      {message && (
-        <Typography color="success.main" sx={{ mt: 2 }}>
-          {message}
-        </Typography>
-      )}
-      {error && (
-        <Typography color="error.main" sx={{ mt: 2 }}>
-          {error}
-        </Typography>
-      )}
       <Button
         onClick={handleBuy}
         variant="contained"
         color="primary"
         disabled={loading}
         fullWidth
-        sx={{ mt: 2 }}
       >
         {loading ? "Processing..." : "Buy"}
       </Button>
+      {message && (
+        <Typography color="success.main" align="center">
+          {message}
+        </Typography>
+      )}
+      {error && (
+        <Typography color="error.main" align="center">
+          {error}
+        </Typography>
+      )}
     </Box>
   );
 };

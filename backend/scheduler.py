@@ -20,10 +20,10 @@ scheduler = None  # Store the scheduler instance
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
 
 # Get intervals from environment variables (with defaults)
-SYNC_INTERVAL_HOURS = int(os.getenv("SYNC_INTERVAL_HOURS", 1))
-UPDATE_PRICES_INTERVAL_HOURS = int(os.getenv("UPDATE_PRICES_INTERVAL_HOURS", 1))
-PERFORMANCE_TRACK_INTERVAL_HOURS = int(os.getenv("PERFORMANCE_TRACK_INTERVAL_HOURS", 1))
-FEAR_GREED_INTERVAL_HOURS = int(os.getenv("FEAR_GREED_INTERVAL_HOURS", 1))
+SYNC_INTERVAL_HOURS = int(os.getenv("SYNC_INTERVAL_HOURS", 12))
+UPDATE_PRICES_INTERVAL_HOURS = int(os.getenv("UPDATE_PRICES_INTERVAL_HOURS", 12))
+PERFORMANCE_TRACK_INTERVAL_HOURS = int(os.getenv("PERFORMANCE_TRACK_INTERVAL_HOURS", 12))
+FEAR_GREED_INTERVAL_HOURS = int(os.getenv("FEAR_GREED_INTERVAL_HOURS", 12))
 
 def safe_task_wrapper(task, task_name):
     """
