@@ -13,6 +13,8 @@ from sqlalchemy import (
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base  # Assuming Base = declarative_base()
+from pydantic import BaseModel
+from typing import List
 
 # Enum for transaction types
 transaction_type_enum = Enum("buy", "sell", name="transaction_type")
@@ -119,16 +121,22 @@ class PortfolioPerformance(Base):
         Index('ix_portfolio_performance_user_date', 'user_id', 'date'),
     )
 
+class FearGreedEntry(BaseModel):
+    date: str  # Use ISO format for dates
+    value: float
+
+class FearGreedHistoryResponse(BaseModel):
+    message: str
+    trend: List[FearGreedEntry]
+
+
 class FearGreedIndex(Base):
-    __tablename__ = 'fear_greed_index'
+    __tablename__ = "fear_greed_index"
 
-    id = Column(Integer, primary_key=True)
-    date = Column(Date, unique=True, nullable=False, index=True)
-    value = Column(Float, nullable=False)
+    id = Column(Integer, primary_key=True, index=True, autoincrement=True)
+    date = Column(Date, nullable=False, unique=True)  # Each date should be unique
+    value = Column(Float, nullable=False)  # Value of the Fear & Greed Index
 
-    __table_args__ = (
-        Index('ix_fear_greed_date', 'date'),
-    )
 
 class Trade(Base):
     __tablename__ = 'trades'

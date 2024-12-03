@@ -3,40 +3,31 @@ import { Line } from "react-chartjs-2";
 import { fetchFearGreedIndex } from "../api";
 
 interface FearGreedData {
-  score: string;
-  rating: string;
-  previous_close: string;
-  previous_1_week: string;
-  previous_1_month: string;
-  previous_1_year: string;
+  date: string;
+  value: number;
 }
 
 const FearGreed: React.FC = () => {
-  const [fearGreedData, setFearGreedData] = useState<FearGreedData | null>(null);
+  const [fearGreedData, setFearGreedData] = useState<FearGreedData[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
 
-  const getErrorMessage = (error: unknown): string => {
-    if (error instanceof Error) {
-      return error.message;
-    }
-    return "An unknown error occurred";
-  };
-  
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const data: FearGreedData = await fetchFearGreedIndex();
+        const data = await fetchFearGreedIndex();
+        console.log("FearGreedData:", data); // Log the data fetched
         setFearGreedData(data);
         setLoading(false);
-      } catch (error) {
-        setError((error as Error).message);
+      } catch (err) {
+        console.error("Error fetching Fear & Greed Index:", err);
+        setError((err as Error).message || "Failed to fetch data.");
         setLoading(false);
       }
     };
+  
     fetchData();
   }, []);
-  
 
   if (loading) {
     return (
@@ -54,25 +45,21 @@ const FearGreed: React.FC = () => {
     );
   }
 
-  if (!fearGreedData) {
+  if (!fearGreedData.length) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-900 text-red-500">
-        <h3>Failed to load data. Please try again later.</h3>
+        <h3>No data available.</h3>
       </div>
     );
   }
 
+  // Prepare chart data
   const chartData = {
-    labels: ["Current", "1 Week Ago", "1 Month Ago", "1 Year Ago"],
+    labels: fearGreedData.map((entry) => entry.date), // Dates for the X-axis
     datasets: [
       {
         label: "Fear & Greed Index",
-        data: [
-          Number(fearGreedData.score),
-          Number(fearGreedData.previous_1_week),
-          Number(fearGreedData.previous_1_month),
-          Number(fearGreedData.previous_1_year),
-        ],
+        data: fearGreedData.map((entry) => entry.value), // Values for the Y-axis
         borderColor: "rgba(75,192,192,1)",
         backgroundColor: "rgba(75,192,192,0.2)",
         pointBackgroundColor: "rgba(255,255,255,1)",

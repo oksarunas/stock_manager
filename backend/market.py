@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Depends
 from sqlalchemy import select, update, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date, timedelta
@@ -7,10 +7,10 @@ import pandas as pd
 import logging
 from yfinance import Ticker
 
-from database import async_session_maker, database
+from database import async_session_maker, database, get_db
 from models import StockPrice, UserStock, Stock
 from schemas import MarketDataResponse
-from fear_greed import fetch_fear_greed_index
+from models import FearGreedEntry, FearGreedHistoryResponse, FearGreedIndex
 
 
 # Configure logging
@@ -113,17 +113,37 @@ async def get_current_price(ticker: str) -> float:
         return None
 
 
-@router.get("/fear-greed", response_model=dict)
-async def get_fear_greed_index():
+@router.get("/fear-greed/history", response_model=FearGreedHistoryResponse)
+async def get_fear_greed_index_history(session: AsyncSession = Depends(get_db)):
     """
-    Fetch the Fear & Greed Index.
+    Fetch historical Fear & Greed Index data from the database.
     """
     try:
-        data = fetch_fear_greed_index()
-        return data
+        # Query the database for historical Fear & Greed Index data
+        result = await session.execute(
+            select(FearGreedIndex.date, FearGreedIndex.value)
+            .order_by(FearGreedIndex.date.asc())
+        )
+        fear_greed_records = result.all()
+
+        # Format the data into a list of trend entries
+        trend_entries = [
+            FearGreedEntry(date=row.date.isoformat(), value=row.value) for row in fear_greed_records
+        ]
+
+        if not trend_entries:
+            raise HTTPException(status_code=404, detail="No Fear & Greed Index data found")
+
+        return FearGreedHistoryResponse(
+            message="Fear & Greed Index history retrieved successfully",
+            trend=trend_entries,
+        )
+
     except Exception as e:
-        logging.error(f"[ERROR] Failed to fetch Fear & Greed Index: {e}")
-        raise HTTPException(status_code=500, detail="Failed to fetch Fear & Greed Index.")
+        logging.error(f"[ERROR] Failed to fetch Fear & Greed Index history: {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch Fear & Greed Index history")
+
+
 
 
 async def update_stock_prices():

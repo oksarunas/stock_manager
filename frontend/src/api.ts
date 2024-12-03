@@ -193,15 +193,34 @@ export const fetchCompanyInfo = async (query: string): Promise<Interfaces.ApiRes
   }
 };
 
-export const fetchFearGreedIndex = async () => {
+export const fetchFearGreedIndex = async (): Promise<{ date: string; value: number }[]> => {
   try {
-    const response = await axios.get('/api/market/fear-greed');
-    return response.data;
+    const response = await fetch("/api/market/fear-greed/history");
+    const contentType = response.headers.get("content-type");
+
+    if (!response.ok) {
+      throw new Error(`HTTP Error: ${response.status}`);
+    }
+
+    if (!contentType || !contentType.includes("application/json")) {
+      throw new Error(`Invalid content type: ${contentType}`);
+    }
+
+    const data = await response.json(); // Parse the JSON
+    console.log("Fetched data: ", data); // Log fetched data
+
+    if (!data.trend || !Array.isArray(data.trend)) {
+      throw new Error("Invalid data structure received.");
+    }
+
+    return data.trend; // Return only the `trend` array
   } catch (error) {
-    console.error('Error fetching Fear & Greed Index:', error);
-    throw new Error('Failed to fetch Fear & Greed Index data');
+    console.error("Error fetching Fear & Greed Index:", error);
+    throw error;
   }
 };
+
+
 
 export const fetchPortfolioAnalysis = async (userId: number): Promise<Interfaces.PortfolioAnalysisResponse> => {
   try {
