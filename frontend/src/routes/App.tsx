@@ -1,43 +1,63 @@
-import React, { useEffect, useState } from 'react';
-import { Route, Routes, Navigate, useNavigate } from 'react-router-dom';
-import { Container, CssBaseline, ThemeProvider } from '@mui/material';
-import theme from '../styles/theme';
-import HomePage from '../pages/HomePage';
-import Login from '../components/auth/Login';
-import Register from '../components/auth/Register';
-import Dashboard from '../pages/Dashboard';
-import Navbar from '../ui/NavBar';
-import PrivateRoute from './PrivateRoute';
-import { logoutUser } from '../api';
-import TransactionsPage from '../pages/TransactionsPage';
-import Portfolio from '../pages/Portfolio';
-import BudgetPage from '../pages/BudgetPage';
-import Search from '../pages/Search';
-import TradePage from '../pages/TradePage';
-import FearGreed from '../pages/FearGreed';
-import Analyze from '../pages/Analyze';
-import TradingBot from '../pages/TradingBot';
+import React, { useEffect, useState } from "react";
+import { Route, Routes, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { Container, CssBaseline, ThemeProvider, CircularProgress } from "@mui/material";
+import theme from "../styles/theme";
+import HomePage from "../pages/HomePage";
+import Login from "../components/auth/Login";
+import Register from "../components/auth/Register";
+import Dashboard from "../pages/Dashboard";
+import Navbar from "../ui/NavBar";
+import PrivateRoute from "./PrivateRoute";
+import { logoutUser } from "../api";
+import TransactionsPage from "../pages/TransactionsPage";
+import Portfolio from "../pages/Portfolio";
+import BudgetPage from "../pages/BudgetPage";
+import Search from "../pages/Search";
+import TradePage from "../pages/TradePage";
+import FearGreed from "../pages/FearGreed";
+import Analyze from "../pages/Analyze";
+import TradingBot from "../pages/TradingBot";
 
 export function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [loading, setLoading] = useState<boolean>(true); // Add loading state
   const navigate = useNavigate();
+  const location = useLocation();
 
   useEffect(() => {
-    const userId = localStorage.getItem('user_id');
+    const userId = localStorage.getItem("user_id");
     setIsAuthenticated(!!userId);
+    setLoading(false); // Set loading to false after checking authentication
   }, []);
 
   const handleLogin = () => {
-    const userId = localStorage.getItem('user_id');
+    const userId = localStorage.getItem("user_id");
     setIsAuthenticated(!!userId);
   };
 
   const handleLogout = () => {
     logoutUser();
     setIsAuthenticated(false);
-    localStorage.removeItem('user_id');
-    navigate('/login');
+    localStorage.removeItem("user_id");
+    navigate("/login");
   };
+
+  if (loading) {
+    // Display a loading indicator while checking authentication
+    return (
+      <Container
+        maxWidth="lg"
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          height: "100vh",
+        }}
+      >
+        <CircularProgress color="primary" size={60} />
+      </Container>
+    );
+  }
 
   return (
     <ThemeProvider theme={theme}>
@@ -45,12 +65,21 @@ export function App() {
       <Navbar isAuthenticated={isAuthenticated} onLogout={handleLogout} />
       <Container maxWidth={false} sx={{ pt: 4 }}>
         <Routes>
-          <Route path="/" element={<HomePage onLogin={handleLogin} />} />
+          <Route
+            path="/"
+            element={
+              isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <Navigate to="/login" replace />
+              )
+            }
+          />
           <Route
             path="/login"
             element={
               isAuthenticated ? (
-                <Navigate to="/portfolio" replace />
+                <Navigate to={location.pathname} replace />
               ) : (
                 <Login onLoginSuccess={handleLogin} />
               )
@@ -60,7 +89,7 @@ export function App() {
             path="/register"
             element={
               isAuthenticated ? (
-                <Navigate to="/portfolio" replace />
+                <Navigate to={location.pathname} replace />
               ) : (
                 <Register onRegisterSuccess={handleLogin} />
               )
@@ -70,7 +99,7 @@ export function App() {
             path="/dashboard"
             element={
               <PrivateRoute isAuthenticated={isAuthenticated}>
-                <Dashboard/>
+                <Dashboard />
               </PrivateRoute>
             }
           />
@@ -110,18 +139,18 @@ export function App() {
             path="/analyze"
             element={
               <PrivateRoute isAuthenticated={isAuthenticated}>
-                <Analyze/>
+                <Analyze />
               </PrivateRoute>
             }
-            />
+          />
           <Route
             path="/tradingbot"
             element={
               <PrivateRoute isAuthenticated={isAuthenticated}>
-                <TradingBot/>
-                </PrivateRoute>
+                <TradingBot />
+              </PrivateRoute>
             }
-            />
+          />
           <Route
             path="/budget"
             element={
