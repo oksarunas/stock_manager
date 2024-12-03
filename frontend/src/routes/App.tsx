@@ -39,7 +39,7 @@ export function App() {
     logoutUser();
     setIsAuthenticated(false);
     localStorage.removeItem("user_id");
-    navigate("/login");
+    navigate("/");
   };
 
   if (loading) {
@@ -64,32 +64,33 @@ export function App() {
       <CssBaseline />
       <Navbar isAuthenticated={isAuthenticated} onLogout={handleLogout} />
       <Container maxWidth={false} sx={{ pt: 4 }}>
-        <Routes>
-          <Route
-            path="/"
-            element={
-              isAuthenticated ? (
-                <Navigate to="/dashboard" replace />
-              ) : (
-                <Navigate to="/login" replace />
-              )
-            }
-          />
-          <Route
-            path="/login"
-            element={
-              isAuthenticated ? (
-                <Navigate to={location.pathname} replace />
-              ) : (
-                <Login onLoginSuccess={handleLogin} />
-              )
-            }
-          />
+      <Routes>
+      <Route
+  path="/"
+  element={
+    isAuthenticated ? (
+      <Navigate to="/dashboard" replace />
+    ) : (
+      <HomePage onLogin={handleLogin} />
+    )
+  }
+/>
+<Route
+  path="/HomePage"
+  element={
+    isAuthenticated ? (
+      <Navigate to="/dashboard" replace />
+    ) : (
+      <HomePage onLogin={handleLogin} />
+    )
+  }
+/>
+
           <Route
             path="/register"
             element={
               isAuthenticated ? (
-                <Navigate to={location.pathname} replace />
+                <Navigate to="/dashboard" replace />
               ) : (
                 <Register onRegisterSuccess={handleLogin} />
               )

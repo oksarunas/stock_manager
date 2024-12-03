@@ -18,7 +18,7 @@ const HomePage: React.FC<HomePageProps> = ({ onLogin }) => {
 
     if (response.success) {
       onLogin(); // Update authentication state in App
-      navigate("/portfolio"); // Redirect to dashboard
+      navigate("/dashboard"); // Redirect to dashboard
     } else {
       console.error("Demo login failed:", response.error);
     }
