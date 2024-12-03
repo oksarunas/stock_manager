@@ -29,24 +29,40 @@ def serialize_trade(trade):
     }
 
 @router.get("/")
-async def get_trades(db: AsyncSession = Depends(get_db)):
+async def get_trades(
+    page: int = 1, 
+    limit: int = 10, 
+    db: AsyncSession = Depends(get_db)
+):
     """
-    Endpoint to fetch all trades.
+    Endpoint to fetch paginated trades.
     """
     try:
-        query = select(Trade)
+        if page < 1 or limit < 1:
+            raise HTTPException(status_code=400, detail="Page and limit must be greater than 0")
 
-        logger.info(f"Executing query: {query}")
+        offset = (page - 1) * limit  # Calculate the offset
 
+        # Query to fetch paginated trades
+        query = select(Trade).order_by(Trade.timestamp.desc()).offset(offset).limit(limit)
         result = await db.execute(query)
         trades = result.scalars().all()
 
+        # Query to get the total count of trades
+        total_count_query = select(func.count()).select_from(Trade)
+        total_count_result = await db.execute(total_count_query)
+        total_count = total_count_result.scalar()
+
         return {
             "trades": [serialize_trade(trade) for trade in trades],
+            "total": total_count,  # Total number of trades
+            "page": page,
+            "limit": limit,
         }
     except Exception as e:
         logger.error(f"Error fetching trades: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error fetching trades: {str(e)}")
+
 
 @router.get("/summary")
 async def get_trade_summary(db: AsyncSession = Depends(get_db)):
