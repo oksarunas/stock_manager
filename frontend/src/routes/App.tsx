@@ -43,7 +43,7 @@ export function App() {
     <ThemeProvider theme={theme}>
       <CssBaseline />
       <Navbar isAuthenticated={isAuthenticated} onLogout={handleLogout} />
-      <Container maxWidth="lg" sx={{ pt: 4 }}>
+      <Container maxWidth={false} sx={{ pt: 4 }}>
         <Routes>
           <Route path="/" element={<HomePage onLogin={handleLogin} />} />
           <Route
