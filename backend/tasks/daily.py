@@ -26,7 +26,9 @@ async def track_portfolio_performance():
     """
     try:
         async with async_session_maker() as session:
-            today = date.today()
+            # Use yesterday's date
+            today = date.today() - timedelta(days=1)
+            logger.info(f"Calculating portfolio performance for date: {today}")
 
             # Check if today's performance is already recorded
             existing_performance_result = await session.execute(
@@ -51,15 +53,18 @@ async def track_portfolio_performance():
 
             # Fetch user stocks and collect stock_ids
             for user_id in users_to_process:
-                stocks = await session.execute(
+                stocks_result = await session.execute(
                     select(UserStock.ticker, UserStock.quantity, Stock.id.label("stock_id"))
                     .join(Stock, UserStock.ticker == Stock.symbol)
                     .where(UserStock.user_id == user_id)
                 )
-                stocks = stocks.all()
+                stocks = stocks_result.all()
+                logger.info(f"Stocks for user {user_id}: {stocks}")
                 user_stocks[user_id] = stocks
                 for _, _, stock_id in stocks:
                     all_stock_ids.add(stock_id)
+
+            logger.info(f"All stock IDs to fetch prices for: {all_stock_ids}")
 
             # Fetch all stock prices in bulk
             stock_prices_result = await session.execute(
@@ -71,7 +76,10 @@ async def track_portfolio_performance():
                     )
                 )
             )
-            stock_prices = {(row.stock_id): row.close_price for row in stock_prices_result.all()}
+            stock_prices_rows = stock_prices_result.all()
+            logger.info(f"Raw query results: {stock_prices_rows}")
+            stock_prices = {row.stock_id: row.close_price for row in stock_prices_rows}
+            logger.info(f"Parsed stock prices: {stock_prices}")
 
             # Calculate performances
             performances = []
@@ -85,6 +93,11 @@ async def track_portfolio_performance():
                         portfolio_value += Decimal(quantity) * Decimal(latest_price)
                     else:
                         logger.warning(f"Missing price data for {ticker} on {today}")
+
+                # Skip users with no valid portfolio value
+                if portfolio_value == 0:
+                    logger.info(f"No valid portfolio data for user {user_id} on {today}. Skipping.")
+                    continue
 
                 # Append today's performance
                 performances.append(
@@ -100,14 +113,16 @@ async def track_portfolio_performance():
                     f"Portfolio value = {portfolio_value}"
                 )
 
-            # Bulk insert performances
-            session.add_all(performances)
-            await session.commit()
-            logger.info(f"Portfolio performance tracking complete for {len(users_to_process)} users.")
+            # Bulk insert performances if there are any valid ones
+            if performances:
+                session.add_all(performances)
+                await session.commit()
+                logger.info(f"Portfolio performance tracking complete for {len(performances)} users.")
+            else:
+                logger.info(f"No valid portfolio data to track for any user on {today}.")
 
     except Exception as e:
         logger.error(f"Failed to track portfolio performance: {e}", exc_info=True)
-
 
 
 async def track_fear_greed_index():

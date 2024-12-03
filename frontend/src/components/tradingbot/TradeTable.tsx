@@ -1,103 +1,101 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback } from "react";
 import {
-  Box,
-  Typography,
-  useTheme,
   Card,
   CardContent,
   CardHeader,
+  Typography,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  Box,
 } from "@mui/material";
-import { DataGrid, GridColDef, GridPaginationModel } from "@mui/x-data-grid";
 import { fetchTrades } from "../../api";
 import * as Interfaces from "../../types/interfaces";
 
 const TradesTable: React.FC = () => {
   const [trades, setTrades] = useState<Interfaces.Trade[]>([]);
   const [loading, setLoading] = useState(true);
-  const [paginationModel, setPaginationModel] = useState<GridPaginationModel>({
+  const [paginationModel, setPaginationModel] = useState({
     page: 0,
     pageSize: 10,
   });
-  const [totalCount, setTotalCount] = useState(0);
 
-  const theme = useTheme();
-
-  const loadTrades = async () => {
+  const loadTrades = useCallback(async () => {
     setLoading(true);
-    const response = await fetchTrades(
-      paginationModel.pageSize,
-      paginationModel.page * paginationModel.pageSize
-    );
-    if (response.success && response.data) {
-      const formattedTrades = response.data.trades.map((trade) => ({
-        ...trade,
-        timestamp: new Date(trade.timestamp).toLocaleString(),
-      }));
-      setTrades(formattedTrades);
-      setTotalCount(response.data.total);
-    } else {
-      console.error("Failed to fetch trades:", response.error);
+    try {
+      const limit = paginationModel.pageSize;
+      const offset = paginationModel.page * paginationModel.pageSize;
+      const response = await fetchTrades(limit, offset);
+      if (response.success && response.data) {
+        const formattedTrades = response.data.trades.map((trade) => ({
+          ...trade,
+          timestamp: new Date(trade.timestamp).toLocaleString(),
+        }));
+        setTrades(formattedTrades);
+      }
+    } catch (error) {
+      console.error("Failed to fetch trades:", error);
+    } finally {
+      setLoading(false);
     }
-    setLoading(false);
-  };
+  }, [paginationModel]);
 
   useEffect(() => {
     loadTrades();
-  }, [paginationModel]);
-
-  const columns: GridColDef[] = [
-    { field: "id", headerName: "ID", width: 100 },
-    { field: "timestamp", headerName: "Timestamp", width: 200 },
-    { field: "action", headerName: "Action", width: 150 },
-    { field: "ticker", headerName: "Ticker", width: 100 },
-    { field: "price", headerName: "Price ($)", width: 150 },
-    { field: "quantity", headerName: "Quantity", width: 150 },
-    { field: "profit_loss", headerName: "Profit/Loss ($)", width: 150 },
-    { field: "budget", headerName: "Budget ($)", width: 150 },
-  ];
+  }, [loadTrades]);
 
   return (
-    <Card
-      sx={{
-        boxShadow: 3,
-        borderRadius: 2,
-        bgcolor: "grey.900",
-      }}
-    >
-      <CardHeader
-        title="Trades"
-        sx={{ color: "text.primary" }}
-      />
+    <Card sx={{ boxShadow: 3, borderRadius: 2, bgcolor: "grey.900", p: 2 }}>
+      <CardHeader title="Trades" sx={{ color: "text.primary" }} />
       <CardContent>
-        <Box sx={{ height: 600, width: "100%" }}>
-          <DataGrid
-            rows={trades}
-            columns={columns}
-            pagination
-            paginationMode="server"
-            rowCount={totalCount}
-            paginationModel={paginationModel}
-            onPaginationModelChange={(newModel) => setPaginationModel(newModel)}
-            pageSizeOptions={[10, 20, 50]}
-            loading={loading}
-            sx={{
-              bgcolor: "grey.900",
-              color: "text.primary",
-              border: "none",
-              "& .MuiDataGrid-columnHeaders": {
-                bgcolor: "grey.800",
-                color: "text.secondary",
-                fontWeight: "bold",
-                borderBottom: `1px solid ${theme.palette.divider}`,
-              },
-              "& .MuiDataGrid-row": {
-                "&:hover": {
-                  bgcolor: "grey.800",
-                },
-              },
-            }}
-          />
-        </Box>
+        {loading ? (
+          <Typography variant="body1" sx={{ color: "text.secondary", textAlign: "center" }}>
+            Loading...
+          </Typography>
+        ) : trades.length === 0 ? (
+          <Typography variant="body1" sx={{ color: "text.secondary", textAlign: "center" }}>
+            No trades available.
+          </Typography>
+        ) : (
+          <TableContainer>
+            <Table>
+              <TableHead>
+                <TableRow>
+                  <TableCell sx={{ color: "text.secondary" }}>Timestamp</TableCell>
+                  <TableCell sx={{ color: "text.secondary" }}>Action</TableCell>
+                  <TableCell sx={{ color: "text.secondary" }}>Price ($)</TableCell>
+                  <TableCell sx={{ color: "text.secondary" }}>Profit/Loss ($)</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {trades.map((trade) => (
+                  <TableRow key={trade.id}>
+                    <TableCell sx={{ color: "text.primary" }}>{trade.timestamp}</TableCell>
+                    <TableCell sx={{ color: "text.primary", fontWeight: "bold" }}>
+                      {trade.action}
+                    </TableCell>
+                    <TableCell sx={{ color: "text.primary" }}>
+                      ${trade.price.toFixed(2)}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        color: trade.profit_loss >= 0 ? "green" : "red",
+                        fontWeight: "bold",
+                      }}
+                    >
+                      {trade.profit_loss >= 0
+                        ? `+$${trade.profit_loss.toFixed(2)}`
+                        : `-$${Math.abs(trade.profit_loss).toFixed(2)}`}
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </TableContainer>
+        )}
       </CardContent>
     </Card>
   );
