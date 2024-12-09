@@ -1,6 +1,6 @@
 import asyncio
 import aiohttp
-import time as time_module  
+import time as time_module
 import math
 import csv
 import os
@@ -12,7 +12,6 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from sqlalchemy.orm import sessionmaker
 from models import Trade
 from decimal import Decimal
-import tempfile
 
 # Configure logging
 logging.basicConfig(
@@ -29,45 +28,51 @@ price_increment = Decimal('10')  # Use $10 increments
 
 # Initialize state variables
 buy_orders = []         # Each entry is (price, quantity)
-sell_orders = []        # Each entry is (price, quantity)
-positions = []          # Each entry is {'buy_price': price, 'quantity': qty}
-occupied_prices = set() # To track price levels that are occupied
+# We'll store sells as (price, quantity, position_id) to link to a unique position
+sell_orders = []        
+positions_dict = {}     # {position_id: {'buy_price': Decimal, 'quantity': Decimal}}
+occupied_prices = set() # Track price levels that are occupied (either buy or sell)
 prev_price_cents = None
 total_profit_loss = Decimal('0.0')
+position_id_counter = 0  # To assign unique IDs to each position
 
 # Database setup with asynchronous engine
-DATABASE_URL = "sqlite+aiosqlite:///stock_manager.db"  
+DATABASE_URL = "sqlite+aiosqlite:///stock_manager.db"
 engine = create_async_engine(DATABASE_URL, echo=False)
 async_session_maker = sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 def save_state():
-    global buy_orders, sell_orders, positions, budget, total_profit_loss, occupied_prices, prev_price_cents
+    global buy_orders, sell_orders, positions_dict, budget, total_profit_loss, occupied_prices, prev_price_cents, position_id_counter
 
     def convert_decimals(obj):
         """Recursively convert Decimal objects to float."""
         if isinstance(obj, Decimal):
-            logging.debug(f"Converting Decimal to float: {obj}")
             return float(obj)
         elif isinstance(obj, dict):
             return {k: convert_decimals(v) for k, v in obj.items()}
-        elif isinstance(obj, (list, tuple, set)):
+        elif isinstance(obj, (list, tuple)):
+            return [convert_decimals(i) for i in obj]
+        elif isinstance(obj, set):
             return [convert_decimals(i) for i in obj]
         else:
             return obj
 
+    # Convert the positions_dict keys (position_id) to string if needed
+    positions_out = {str(k): v for k, v in positions_dict.items()}
+
     state = {
         "buy_orders": convert_decimals(buy_orders),
         "sell_orders": convert_decimals(sell_orders),
-        "positions": convert_decimals(positions),
+        "positions_dict": convert_decimals(positions_out),
         "budget": float(budget),
         "total_profit_loss": float(total_profit_loss),
-        "occupied_prices": convert_decimals(list(occupied_prices)),  # Convert set to list
+        "occupied_prices": convert_decimals(list(occupied_prices)),
         "prev_price_cents": prev_price_cents,
+        "position_id_counter": position_id_counter
     }
 
     try:
         import tempfile
-        import os
         with tempfile.NamedTemporaryFile("w", delete=False) as tmp_file:
             json.dump(state, tmp_file)
             tmp_filename = tmp_file.name
@@ -78,7 +83,7 @@ def save_state():
 
 
 def load_state():
-    global buy_orders, sell_orders, positions, budget, total_profit_loss, occupied_prices, prev_price_cents
+    global buy_orders, sell_orders, positions_dict, budget, total_profit_loss, occupied_prices, prev_price_cents, position_id_counter
 
     def convert_to_decimal(obj):
         """Recursively convert numeric types to Decimal."""
@@ -97,47 +102,46 @@ def load_state():
                 state = json.load(f)
             buy_orders = convert_to_decimal(state.get("buy_orders", []))
             sell_orders = convert_to_decimal(state.get("sell_orders", []))
-            positions = convert_to_decimal(state.get("positions", []))
+            positions_loaded = convert_to_decimal(state.get("positions_dict", {}))
+            # convert position keys back to int
+            positions_dict = {int(k): v for k, v in positions_loaded.items()}
             budget = Decimal(str(state.get("budget", '1000000')))
             total_profit_loss = Decimal(str(state.get("total_profit_loss", '0.0')))
             occupied_prices = set(convert_to_decimal(state.get("occupied_prices", [])))
             prev_price_cents = state.get("prev_price_cents", None)
+            position_id_counter = state.get("position_id_counter", 0)
             logging.info("Bot state loaded successfully.")
         except (ValueError, json.JSONDecodeError) as e:
             logging.error(f"Failed to load state: {e}. Resetting state to defaults.")
-            # Initialize default values
-            buy_orders = []
-            sell_orders = []
-            positions = []
-            occupied_prices = set()
-            budget = Decimal('1000000')
-            total_profit_loss = Decimal('0.0')
-            prev_price_cents = None
+            reset_state()
     else:
         # Initialize default values if no state file exists
-        buy_orders = []
-        sell_orders = []
-        positions = []
-        occupied_prices = set()
-        budget = Decimal('1000000')
-        total_profit_loss = Decimal('0.0')
-        prev_price_cents = None
+        reset_state()
 
+def reset_state():
+    global buy_orders, sell_orders, positions_dict, occupied_prices, budget, total_profit_loss, prev_price_cents, position_id_counter
+    buy_orders = []
+    sell_orders = []
+    positions_dict = {}
+    occupied_prices = set()
+    budget = Decimal('1000000')
+    total_profit_loss = Decimal('0.0')
+    prev_price_cents = None
+    position_id_counter = 0
 
 
 async def log_trade(timestamp, action, price, quantity, budget, profit_loss):
     """Log trade details to the database."""
     try:
         async with async_session_maker() as session:
-            # Add trade record to the database
             trade = Trade(
                 timestamp=datetime.strptime(timestamp, "%Y-%m-%d %H:%M:%S"),
                 action=action,
                 ticker=ticker,
-                price=price,
-                quantity=quantity,
-                profit_loss=round(profit_loss, 2),
-                budget=round(budget, 2)
+                price=Decimal(str(price)),
+                quantity=Decimal(str(quantity)),
+                profit_loss=Decimal(str(round(profit_loss, 2))),
+                budget=Decimal(str(round(budget, 2)))
             )
             session.add(trade)
             await session.commit()
@@ -152,28 +156,17 @@ def is_market_open():
     current_weekday = now.weekday()
     current_time = now.time()
 
-    # Debug log
-    logging.debug(f"Checking market open status - Time: {now}, Weekday: {current_weekday}")
-
-    if current_weekday == 6:  # Sunday
-        if current_time >= datetime_time(18, 0):
-            logging.debug("Market is open (Sunday evening).")
-            return True
-        else:
-            logging.debug("Market is closed (Sunday before 6 PM).")
-            return False
-    elif current_weekday == 4:  # Friday
-        if current_time < datetime_time(17, 0):
-            logging.debug("Market is open (Friday before 5 PM).")
-            return True
-        else:
-            logging.debug("Market is closed (Friday after 5 PM).")
-            return False
-    elif current_weekday in {0, 1, 2, 3}:  # Monday to Thursday
-        logging.debug("Market is open (Monday to Thursday).")
+    # Sunday: open at 6 PM
+    if current_weekday == 6:
+        return current_time >= datetime_time(18, 0)
+    # Monday-Thursday: 24 hours, except brief maintenance break usually not considered here
+    elif current_weekday in {0, 1, 2, 3}:
         return True
-    else:  # Saturday
-        logging.debug("Market is closed (Saturday).")
+    # Friday: closes at 5 PM
+    elif current_weekday == 4:
+        return current_time < datetime_time(17, 0)
+    # Saturday: closed
+    else:
         return False
 
 async def fetch_latest_data(session):
@@ -210,10 +203,11 @@ def cancel_outdated_buy_orders(potential_buy_prices_cents, current_time):
         order_price_cents = int(round(order[0] * 100))
         if order_price_cents not in potential_buy_prices_cents:
             buy_orders.remove(order)
-            occupied_prices.remove(order[0])
+            if order[0] in occupied_prices:
+                occupied_prices.remove(order[0])
             logging.info(
                 f"Time: {current_time} - Cancelled buy limit order at ${order[0]} "
-                "as it's no longer among the 10 nearest price levels due to price increase."
+                "as it's no longer among the 10 nearest price levels."
             )
 
 def remove_unoccupied_prices(potential_buy_prices_cents, current_time):
@@ -221,22 +215,41 @@ def remove_unoccupied_prices(potential_buy_prices_cents, current_time):
     global occupied_prices
     for price in list(occupied_prices):
         price_cents = int(round(Decimal(price) * 100))
-        if price_cents not in potential_buy_prices_cents:
-            if all(int(round(Decimal(order[0]) * 100)) != price_cents for order in buy_orders) and \
-               all(int(round(Decimal(order[0]) * 100)) != price_cents + int(price_increment * 100) for order in sell_orders):
-                occupied_prices.remove(price)
-                logging.info(
-                    f"Time: {current_time} - Removed price level ${price} from occupied_prices "
-                    "as it's no longer among the 10 nearest and has no active orders."
-                )
+        # Check if this price is used by any buy or sell orders
+        buy_exists = any(int(round(Decimal(o[0])*100)) == price_cents for o in buy_orders)
+        sell_exists = any(int(round(Decimal(o[0])*100)) == price_cents for o in sell_orders)
+        if price_cents not in potential_buy_prices_cents and not buy_exists and not sell_exists:
+            occupied_prices.remove(price)
+            logging.info(
+                f"Time: {current_time} - Removed price level ${price} from occupied_prices "
+                "as it's no longer among the 10 nearest and has no active orders."
+            )
+
+def get_lowest_sell_price():
+    """Return the lowest sell order price if any sells exist."""
+    if sell_orders:
+        return min(s[0] for s in sell_orders)
+    return None
 
 def place_buy_orders(potential_buy_prices_cents, current_price_cents, current_time):
     """Place new buy limit orders for the 10 nearest price levels if not already occupied."""
-    global buy_orders, occupied_prices, budget
+    global buy_orders, occupied_prices, budget, sell_orders
     price_increment_cents = int(price_increment * 100)
+    lowest_sell = get_lowest_sell_price()
+
     for buy_price_cents in potential_buy_prices_cents:
-        buy_price = Decimal(buy_price_cents) / 100  # Convert back to dollars
+        buy_price = Decimal(buy_price_cents) / 100
+        # Only add a new buy if we have room
         if buy_price not in occupied_prices and len(occupied_prices) < 10 and budget >= buy_price:
+            # Check against existing sells to avoid being too close
+            if lowest_sell is not None:
+                # If new buy would be >= (lowest_sell - 10), skip
+                if buy_price >= (lowest_sell - Decimal('10')):
+                    logging.info(
+                        f"Time: {current_time} - Skipping new buy at ${buy_price} since it's too close to sell orders."
+                    )
+                    continue
+
             quantity = Decimal('0.1')
             buy_orders.append((buy_price, quantity))
             occupied_prices.add(buy_price)
@@ -247,59 +260,89 @@ def place_buy_orders(potential_buy_prices_cents, current_price_cents, current_ti
 
 async def execute_buy_orders(current_price, current_time):
     """Execute buy orders if conditions are met."""
-    global buy_orders, sell_orders, positions, budget, occupied_prices
+    global buy_orders, sell_orders, positions_dict, budget, occupied_prices, position_id_counter
+
     for order in list(buy_orders):
         order_price = order[0]
         order_quantity = order[1]
+
         if current_price <= order_price and budget >= order_price * order_quantity:
+            # Execute the buy
             budget -= order_price * order_quantity
             buy_orders.remove(order)
-            positions.append({'buy_price': order_price, 'quantity': order_quantity})
+            if order_price in occupied_prices:
+                occupied_prices.remove(order_price)  # Remove the executed buy price
+
+            # Create a unique position ID
+            position_id_counter += 1
+            pos_id = position_id_counter
+            positions_dict[pos_id] = {'buy_price': order_price, 'quantity': order_quantity}
+
             logging.info(
                 f"Time: {current_time} - Executed buy order at ${order_price} "
                 f"for {order_quantity} unit(s). Remaining budget: ${budget:.2f}"
             )
             await log_trade(current_time, 'Buy', float(order_price), float(order_quantity), float(budget), 0.0)
+
             # Set corresponding sell order
             sell_price = order_price + price_increment
-            sell_orders.append((sell_price, order_quantity))
+            sell_orders.append((sell_price, order_quantity, pos_id))
+            occupied_prices.add(sell_price)
             logging.info(
                 f"Time: {current_time} - Setting sell limit order at ${sell_price} "
                 f"for {order_quantity} unit(s)"
             )
-            # occupied_prices remains the same since the price level is still occupied by the sell order
+
+            # Add a new buy order 100 points below the executed buy price
+            new_buy_price = order_price - Decimal('100')
+            if new_buy_price > 0 and new_buy_price not in occupied_prices and budget >= new_buy_price * order_quantity:
+                buy_orders.append((new_buy_price, order_quantity))
+                occupied_prices.add(new_buy_price)
+                logging.info(
+                    f"Time: {current_time} - Setting new buy limit order at ${new_buy_price} "
+                    f"for {order_quantity} unit(s)"
+                )
+
 
 async def execute_sell_orders(current_price, current_time):
     """Execute sell orders if conditions are met."""
-    global sell_orders, positions, budget, occupied_prices, total_profit_loss
+    global sell_orders, positions_dict, budget, occupied_prices, total_profit_loss
     for order in list(sell_orders):
+        # Ensure the order has the expected structure
+        if len(order) < 3:
+            logging.error(f"Malformed sell order encountered: {order}. Skipping.")
+            continue
+
         order_price = order[0]
         order_quantity = order[1]
+        pos_id = order[2]  # Ensure this is safe now
+
         if current_price >= order_price:
+            # Execute the sell
             budget += order_price * order_quantity
             sell_orders.remove(order)
-            original_buy_price = order_price - price_increment
-            logging.info(
-                f"Time: {current_time} - Executed sell order at ${order_price} "
-                f"for {order_quantity} unit(s). Updated budget: ${budget:.2f}"
-            )
-            # Calculate profit/loss for this trade
-            position = next(
-                (pos for pos in positions if pos['buy_price'] == original_buy_price and pos['quantity'] == order_quantity),
-                None
-            )
+            if order_price in occupied_prices:
+                occupied_prices.remove(order_price)
+
+            position = positions_dict.get(pos_id, None)
             if position:
                 profit_loss = (order_price - position['buy_price']) * order_quantity
                 total_profit_loss += profit_loss
-                positions.remove(position)
+                del positions_dict[pos_id]
             else:
-                profit_loss = Decimal('0.0')  # This should not happen
-            await log_trade(current_time, 'Sell', float(order_price), float(order_quantity), float(budget), float(profit_loss))
-            # Remove the price level from occupied_prices
-            occupied_prices.remove(float(original_buy_price))
+                # Should not happen, but handle gracefully
+                profit_loss = Decimal('0.0')
+                logging.warning(
+                    f"Time: {current_time} - No matching position found for sell at ${order_price} "
+                    f"with position ID {pos_id}. This should not happen."
+                )
+
             logging.info(
-                f"Time: {current_time} - Price level ${original_buy_price} is now unoccupied."
+                f"Time: {current_time} - Executed sell order at ${order_price} "
+                f"for {order_quantity} unit(s). Updated budget: ${budget:.2f}, Profit/Loss: ${profit_loss:.2f}"
             )
+            await log_trade(current_time, 'Sell', float(order_price), float(order_quantity), float(budget), float(profit_loss))
+
 
 def print_status(current_time, current_price):
     """Print the current status of orders and positions."""
@@ -311,9 +354,8 @@ def print_status(current_time, current_price):
     for order in sorted(sell_orders, key=lambda x: x[0]):
         print(f"  Sell at ${order[0]:.2f} for {order[1]} unit(s)")
     print(f"Occupied Price Levels: {[float(price) for price in sorted(occupied_prices)]}")
-    print(f"Total Realized Profit/Loss: ${total_profit_loss:.2f}\n")
-
-
+    print(f"Total Realized Profit/Loss: ${total_profit_loss:.2f}")
+    print(f"Open Positions: {len(positions_dict)}")
 
 async def main():
     """Main function to run the trading bot."""
@@ -336,39 +378,28 @@ async def main():
                     await asyncio.sleep(15)
                     continue
 
-                # Normalize prices to cents to avoid floating-point issues
                 current_price_cents = int(round(current_price * 100))
-                price_increment_cents = int(price_increment * 100)
-
-                # Determine if the price has increased or decreased
                 if prev_price_cents is not None:
                     price_moved_up = current_price_cents > prev_price_cents
                 else:
-                    price_moved_up = False  # On first run
+                    price_moved_up = False
 
-                prev_price_cents = current_price_cents  # Update previous price
+                prev_price_cents = current_price_cents
 
-                # Calculate potential buy prices
                 potential_buy_prices_cents = calculate_price_levels(current_price_cents)
 
-                # Cancel outdated buy orders
-                if price_moved_up:
-                    cancel_outdated_buy_orders(potential_buy_prices_cents, current_time)
+                # Cancel outdated buy orders if price moved up
+                ##if price_moved_up:
+                    ##cancel_outdated_buy_orders(potential_buy_prices_cents, current_time)
 
-                # Remove unoccupied prices
                 remove_unoccupied_prices(potential_buy_prices_cents, current_time)
-
-                # Place new buy orders
                 place_buy_orders(potential_buy_prices_cents, current_price_cents, current_time)
-
-                # Execute orders
                 await execute_buy_orders(current_price, current_time)
                 await execute_sell_orders(current_price, current_time)
 
-                # Print status
                 print_status(current_time, current_price)
 
-                # Save state periodically (after significant actions)
+                # Save state
                 save_state()
 
                 await asyncio.sleep(15)
