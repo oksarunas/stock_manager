@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+from typing import List
 from sqlalchemy import select, update, distinct
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import date, timedelta
@@ -6,11 +7,9 @@ import yfinance as yf
 import pandas as pd
 import logging
 from yfinance import Ticker
-
 from database import async_session_maker, database, get_db
-from models import StockPrice, UserStock, Stock
-from schemas import MarketDataResponse
-from models import FearGreedEntry, FearGreedHistoryResponse, FearGreedIndex
+from models import StockPrice, UserStock, Stock, FearGreedEntry, FearGreedHistoryResponse, FearGreedIndex
+from schemas import MarketDataResponse, ApiResponse, StockPriceData
 
 
 # Configure logging
@@ -63,7 +62,7 @@ async def get_company_info(query: str):
         raise HTTPException(status_code=500, detail="Failed to fetch company information.")
 
 
-@router.get("/market/{ticker}", response_model=MarketDataResponse)
+@router.get("/{ticker}", response_model=MarketDataResponse)
 async def get_market_data(ticker: str):
     """
     Fetch market data for a specific ticker.
@@ -220,3 +219,35 @@ async def fetch_stock_sector(ticker: str) -> str:
     except Exception as e:
         logging.error(f"[ERROR] Error fetching sector for {ticker}: {e}")
         return "Unknown"
+    
+
+
+@router.get("/historical/{ticker}", response_model=ApiResponse)
+async def get_historical_prices(ticker: str, range: str = "1mo"):
+    """
+    Fetch historical price data for a specific ticker and range.
+    """
+    try:
+        stock = yf.Ticker(ticker)
+        historical_data = stock.history(period=range)
+
+        if historical_data.empty:
+            raise HTTPException(status_code=404, detail=f"No historical data available for ticker '{ticker}'")
+
+        stock_prices = []
+        for idx, row in historical_data.iterrows():
+            stock_price = StockPriceData(
+                date=idx.strftime('%Y-%m-%d'),
+                open=row['Open'],
+                high=row['High'],
+                low=row['Low'],
+                close=row['Close'],
+                volume=int(row['Volume'])
+            )
+            stock_prices.append(stock_price)
+
+        return ApiResponse(success=True, data=stock_prices, error=None)
+
+    except Exception as e:
+        logging.error(f"[ERROR] Failed to fetch historical prices for '{ticker}': {e}")
+        raise HTTPException(status_code=500, detail="Failed to fetch historical prices.")

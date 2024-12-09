@@ -88,7 +88,7 @@ export const viewPortfolio = async (userId: number): Promise<Interfaces.ApiRespo
 };
 
 export const fetchPortfolioPerformance = async (
-  portfolio: Interfaces.PortfolioItem[]
+  portfolio: Interfaces.Stock[]
 ): Promise<Interfaces.ApiResponse<Interfaces.PerformanceResponse>> => {
   try {
     // Send portfolio directly as an array instead of wrapping in an object
@@ -270,5 +270,20 @@ export const fetchPortfolioTrend = async (userId: number): Promise<Interfaces.Po
   }
 };
 
+
+export const fetchHistoricalPrices = async (
+  ticker: string,
+  range: string = "1mo" // Default range to 1 month
+): Promise<Interfaces.ApiResponse<Interfaces.StockPriceData[]>> => {
+  try {
+    const response = await axiosInstance.get<Interfaces.ApiResponse<Interfaces.StockPriceData[]>>(
+      `/market/historical/${ticker}`,
+      { params: { range } } // Send the time range as a query parameter
+    );
+    return response.data;
+  } catch (error) {
+    return handleError(error);
+  }
+};
 
 export default axiosInstance;

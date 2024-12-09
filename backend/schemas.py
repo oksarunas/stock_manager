@@ -1,22 +1,27 @@
 from pydantic import BaseModel, Field
-from typing import Literal, Optional, List
+from typing import Literal, Optional, List, Union
 from datetime import datetime, date
 
-# User-related schemas
+
+# ========== User-Related Schemas ==========
+
 class UserCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    password: str = Field(..., min_length=6)  # Password should be hashed before storage
+    password: str = Field(..., min_length=6)  # Password will be hashed before storage
     budget: float = Field(default=0.0)
+
 
 class UserLogin(BaseModel):
     username: str
     password: str
 
+
 class BudgetUpdate(BaseModel):
     new_budget: float = Field(..., ge=0)
 
 
-# Stock-related schemas
+# ========== Stock-Related Schemas ==========
+
 class StockResponse(BaseModel):
     id: int
     symbol: str
@@ -27,12 +32,13 @@ class StockResponse(BaseModel):
         orm_mode = True
 
 
-# Portfolio-related schemas
+# ========== Portfolio-Related Schemas ==========
+
 class StockAddRequest(BaseModel):
-    user_id: int
     ticker: str = Field(..., min_length=1, max_length=5, pattern=r"^[A-Z]+$")
     quantity: int = Field(..., gt=0)
     purchase_price: float = Field(..., ge=0)
+
 
 class PortfolioEntry(BaseModel):
     ticker: str
@@ -42,9 +48,9 @@ class PortfolioEntry(BaseModel):
     current_price: Optional[float] = Field(default=0.0)
     current_value: Optional[float] = Field(default=0.0)
 
+
 class PortfolioResponse(BaseModel):
     message: str
-    user_id: int
     portfolio: List[PortfolioEntry]
     total_portfolio_value: float
 
@@ -52,17 +58,17 @@ class PortfolioResponse(BaseModel):
         orm_mode = True
 
 
-# Transaction-related schemas
+# ========== Transaction-Related Schemas ==========
+
 class TransactionCreate(BaseModel):
-    user_id: int
     ticker: str = Field(..., min_length=1, max_length=5, pattern=r"^[A-Z]+$")
     transaction_type: Literal["buy", "sell"]
     quantity: int = Field(..., gt=0)
     price: float = Field(..., ge=0)
 
+
 class TransactionResponse(BaseModel):
     id: int
-    user_id: int
     ticker: str
     transaction_type: Literal["buy", "sell"]
     quantity: int
@@ -74,27 +80,34 @@ class TransactionResponse(BaseModel):
         orm_mode = True
 
 
-# Market data-related schema
+# ========== Market Data Schemas ==========
+
 class MarketDataResponse(BaseModel):
     ticker: str
-    date: str
+    date: date  # Changed from str to date for consistency
     open: float
     high: float
     low: float
     close: float
     volume: Optional[int] = Field(default=None)
 
+
+# ========== Portfolio Analysis Schemas ==========
+
 class PortfolioWeight(BaseModel):
     ticker: str
     weight: float
+
 
 class SectorDistribution(BaseModel):
     sector: str
     percentage: float
 
+
 class SP500Comparison(BaseModel):
     portfolio_return: float
     sp500_return: float
+
 
 class PortfolioAnalysisResponse(BaseModel):
     weights: List[PortfolioWeight]
@@ -103,12 +116,39 @@ class PortfolioAnalysisResponse(BaseModel):
     suggestions: List[str]
 
 
+# ========== Portfolio Trend Schemas ==========
+
 class PortfolioTrendEntry(BaseModel):
     date: date
     portfolio_value: float
     daily_return: Optional[float] = None
 
+
 class PortfolioTrendResponse(BaseModel):
     message: str
-    user_id: int
     trend: List[PortfolioTrendEntry]
+
+
+# ========== Stock Price Data and API Response Schemas ==========
+
+class StockPriceData(BaseModel):
+    date: date  # Changed from str to date for consistency
+    open: float
+    high: float
+    low: float
+    close: float
+    volume: int
+
+
+class HistoricalPricesResponse(BaseModel):
+    success: bool
+    data: Optional[List[StockPriceData]]
+    error: Optional[str]
+
+
+# ========== Generic API Response Schema ==========
+
+class ApiResponse(BaseModel):
+    success: bool
+    data: Optional[Union[dict, list, str]]  # Adjusted for flexibility
+    error: Optional[str]

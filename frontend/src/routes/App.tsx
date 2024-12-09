@@ -1,9 +1,20 @@
 import React, { useEffect, useState } from "react";
-import { Route, Routes, Navigate, useNavigate, useLocation } from "react-router-dom";
-import { Container, CssBaseline, ThemeProvider, CircularProgress } from "@mui/material";
+import {
+  Route,
+  BrowserRouter as Router,
+  Routes,
+  Navigate,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
+import {
+  Container,
+  CssBaseline,
+  ThemeProvider,
+  CircularProgress,
+} from "@mui/material";
 import theme from "../styles/theme";
 import HomePage from "../pages/HomePage";
-import Login from "../components/auth/Login";
 import Register from "../components/auth/Register";
 import Dashboard from "../pages/Dashboard";
 import Navbar from "../ui/NavBar";
@@ -17,17 +28,18 @@ import TradePage from "../pages/TradePage";
 import FearGreed from "../pages/FearGreed";
 import Analyze from "../pages/Analyze";
 import TradingBot from "../pages/TradingBot";
+import StockPage from "../pages/StockPage";
 
 export function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [loading, setLoading] = useState<boolean>(true); // Add loading state
+  const [loading, setLoading] = useState<boolean>(true);
   const navigate = useNavigate();
   const location = useLocation();
 
   useEffect(() => {
     const userId = localStorage.getItem("user_id");
     setIsAuthenticated(!!userId);
-    setLoading(false); // Set loading to false after checking authentication
+    setLoading(false);
   }, []);
 
   const handleLogin = () => {
@@ -43,7 +55,6 @@ export function App() {
   };
 
   if (loading) {
-    // Display a loading indicator while checking authentication
     return (
       <Container
         maxWidth="lg"
@@ -64,28 +75,27 @@ export function App() {
       <CssBaseline />
       <Navbar isAuthenticated={isAuthenticated} onLogout={handleLogout} />
       <Container maxWidth={false} sx={{ pt: 4 }}>
-      <Routes>
-      <Route
-  path="/"
-  element={
-    isAuthenticated ? (
-      <Navigate to="/dashboard" replace />
-    ) : (
-      <HomePage onLogin={handleLogin} />
-    )
-  }
-/>
-<Route
-  path="/HomePage"
-  element={
-    isAuthenticated ? (
-      <Navigate to="/dashboard" replace />
-    ) : (
-      <HomePage onLogin={handleLogin} />
-    )
-  }
-/>
-
+        <Routes>
+          <Route
+            path="/"
+            element={
+              isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <HomePage onLogin={handleLogin} />
+              )
+            }
+          />
+          <Route
+            path="/HomePage"
+            element={
+              isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <HomePage onLogin={handleLogin} />
+              )
+            }
+          />
           <Route
             path="/register"
             element={
@@ -165,6 +175,15 @@ export function App() {
             element={
               <PrivateRoute isAuthenticated={isAuthenticated}>
                 <Search />
+              </PrivateRoute>
+            }
+          />
+          {/* Add the route for StockPage */}
+          <Route
+            path="/stocks/:ticker"
+            element={
+              <PrivateRoute isAuthenticated={isAuthenticated}>
+                <StockPage />
               </PrivateRoute>
             }
           />

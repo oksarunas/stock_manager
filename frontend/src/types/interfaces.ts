@@ -1,5 +1,3 @@
-// src/types/interfaces.ts
-
 // General API response interface
 export interface ApiResponse<T> {
   success: boolean;
@@ -29,22 +27,19 @@ export interface Transaction {
   quantity: number;
   price: number;
   total_cost: number;
-  timestamp: string;
+  timestamp: string; // ISO date string
 }
 
 // User-related interfaces
-export interface PortfolioItem {
-  ticker: string;
-  quantity: number;
-  purchase_price: number;
-}
-
 export interface User {
   id: number;
   username: string;
+  email?: string;
   budget: number;
-  portfolioValue: number;
-  portfolio: PortfolioItem[]; // Add portfolio field for user's stocks
+  portfolioValue?: number;
+  portfolio?: Stock[];
+  created_at?: string;
+  updated_at?: string;
 }
 
 export interface UserResponse {
@@ -54,48 +49,9 @@ export interface UserResponse {
 
 // Portfolio and Performance-related interfaces
 export interface PortfolioData {
-  portfolio: Array<{
-    ticker: string;
-    quantity: number;
-    purchase_price: number;
-    total_cost: number;
-    current_price: number | null;
-    current_value: number | null;
-  }>;
+  portfolio: Stock[];
   total_portfolio_value: number;
   historical_values?: { date: string; value: number }[]; // Optional for line chart
-}
-
-export interface PortfolioPerformance {
-  total_investment: number;
-  total_current_value: number;
-  roi: number;
-  details: Array<{
-    ticker: string;
-    quantity: number;
-    purchase_price: number;
-    current_price: number;
-    investment: number;
-    current_value: number;
-    individual_roi: number;
-  }>;
-}
-
-// Budget-related interface
-export interface BudgetResponse {
-  budget: number;
-  new_budget?: number;
-}
-
-// Individual Stock details
-export interface Stock {
-  id: number;
-  ticker: string;
-  quantity: number;
-  purchase_price: number;
-  current_price: number | null;
-  current_value: number | null;
-  performance?: number;
 }
 
 export interface StockPerformance {
@@ -115,6 +71,26 @@ export interface PerformanceResponse {
   details: StockPerformance[];
 }
 
+// Budget-related interface
+export interface BudgetResponse {
+  budget: number;
+  new_budget?: number;
+}
+
+// Individual Stock interface
+export interface Stock {
+  id?: number;
+  ticker: string;
+  quantity: number;
+  purchase_price: number;
+  total_cost?: number;
+  current_price?: number | null;
+  current_value?: number | null;
+  performance?: number;
+  last_updated?: string;
+}
+
+// Company and Financial Data
 export interface CompanyInfo {
   name: string;
   ticker: string;
@@ -123,14 +99,26 @@ export interface CompanyInfo {
   currentPrice: number;
   marketCap: number;
   peRatio: number;
+  eps: number;
   fiftyTwoWeekHigh: number;
   fiftyTwoWeekLow: number;
   dividendYield: number;
   priceToBook: number;
-  historicalPrices: {
-    dates: string[];
-    prices: number[];
-  };
+}
+
+export interface FinancialData {
+  peRatio: number;
+  eps: number;
+  marketCap: number;
+  dividendYield: number;
+  // Add more financial fields as needed
+}
+
+export interface PortfolioAnalysisResponse {
+  weights: PortfolioWeight[];
+  sectors: SectorDistribution[];
+  sp500_comparison: SP500Comparison;
+  suggestions: string[];
 }
 
 export interface PortfolioWeight {
@@ -148,16 +136,34 @@ export interface SP500Comparison {
   sp500_return: number;
 }
 
-export interface PortfolioAnalysisResponse {
-  weights: PortfolioWeight[];
-  sectors: SectorDistribution[];
-  sp500_comparison: SP500Comparison;
-  suggestions: string[];
+
+// Portfolio Trend
+export interface PortfolioTrendEntry {
+  date: string; // ISO date string
+  portfolio_value: number;
+  daily_return?: number | null;
 }
 
+export interface PortfolioTrendResponse {
+  message: string;
+  user_id: number;
+  trend: PortfolioTrendEntry[];
+}
+
+// Stock Price Data
+export interface StockPriceData {
+  date: string; // ISO date string
+  open: number;
+  high: number;
+  low: number;
+  close: number;
+  volume: number;
+}
+
+// Trade-related interfaces
 export interface Trade {
   id: number;
-  timestamp: string;
+  timestamp: string; // ISO date string
   action: string;
   ticker: string;
   price: number;
@@ -178,17 +184,15 @@ export interface TradeSummary {
   last_24h_profit: number;
 }
 
-
-
-interface MenuItem {
+// Menu Item (UI-related)
+export interface MenuItem {
   text: string;
   icon: React.ReactElement;
   path?: string;
   action?: () => void;
 }
 
-
-
+// Authentication
 export interface UserLogin {
   username: string;
   password: string;
@@ -196,58 +200,17 @@ export interface UserLogin {
 
 export interface AuthResponse {
   token: string;
-  userId?: number;  
-  expiresIn?: number;  
-}
-
-
-
-export interface Stock {
-  ticker: string;
-  quantity: number;
-  purchase_price: number;
-  total_cost: number;
-  current_price: number | null;
-  current_value: number | null;
-  last_updated?: string; 
-}
-
-export interface PortfolioResponse {
-  portfolio: Stock[];
-  total_portfolio_value: number;
-  last_calculated?: string; // Optional: timestamp of the portfolio's last valuation
-}
-
-
-export interface User {
-  id: number;
-  username: string;
-  email?: string;         // Optional, if your app collects email addresses
-  budget: number;         // User's available budget
-  created_at?: string;    // Optional, timestamp of user account creation
-  updated_at?: string;    // Optional, timestamp of last profile update
+  userId?: number;
+  expiresIn?: number;
 }
 
 export interface UserRegistration {
   username: string;
   password: string;
   budget: number;
-  email?: string;         // Optional, if applicable
+  email?: string;
 }
 
 export interface UserProfileResponse {
   user: User;
-}
-
-
-export interface PortfolioTrendEntry {
-  date: string; // Ensure it's compatible with the backend's date format
-  portfolio_value: number;
-  daily_return?: number | null;
-}
-
-export interface PortfolioTrendResponse {
-  message: string;
-  user_id: number;
-  trend: PortfolioTrendEntry[];
 }

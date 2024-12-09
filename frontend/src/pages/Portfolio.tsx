@@ -1,5 +1,3 @@
-// src/pages/Portfolio.tsx
-
 import React, { useEffect, useState, useCallback } from 'react';
 import {
   Card,
@@ -15,6 +13,7 @@ import {
   TableHead,
   TableRow,
   Button,
+  Link,
 } from '@mui/material';
 import AttachMoneyIcon from '@mui/icons-material/AttachMoney';
 import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
@@ -22,7 +21,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import { useUser } from '../components/hooks/useUser';
 import apiClient from '../api';
 import { Stock } from '../types/interfaces';
-import { Link } from 'react-router-dom';
+import { Link as RouterLink } from 'react-router-dom';
 
 const Portfolio: React.FC = () => {
   const { user } = useUser();
@@ -62,7 +61,7 @@ const Portfolio: React.FC = () => {
           Portfolio
         </Typography>
         <Box sx={{ flexGrow: 1 }} />
-        <Button component={Link} to="/trade" variant="contained" color="primary">
+        <Button component={RouterLink} to="/trade" variant="contained" color="primary">
           Trade Stocks
         </Button>
       </Box>
@@ -129,9 +128,19 @@ const Portfolio: React.FC = () => {
                     : 0;
 
                   return (
-                    <TableRow key={stock.ticker} sx={{ '&:last-child td, &:last-child th': { border: 0 } }}>
-                      <TableCell sx={{ color: 'text.primary', fontWeight: 'bold' }}>
-                        {stock.ticker}
+                    <TableRow
+                      key={stock.ticker}
+                      sx={{ '&:last-child td, &:last-child th': { border: 0 } }}
+                    >
+                      <TableCell sx={{ color: 'primary.main', fontWeight: 'bold' }}>
+                        <Link
+                          component={RouterLink}
+                          to={`/stocks/${stock.ticker}`}
+                          underline="hover"
+                          sx={{ color: 'primary.light', fontWeight: 'bold' }}
+                        >
+                          {stock.ticker}
+                        </Link>
                       </TableCell>
                       <TableCell sx={{ color: 'text.primary' }}>{stock.quantity}</TableCell>
                       <TableCell sx={{ color: 'text.primary' }}>
