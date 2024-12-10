@@ -16,7 +16,6 @@ const FearGreed: React.FC = () => {
     const fetchData = async () => {
       try {
         const data = await fetchFearGreedIndex();
-        console.log("FearGreedData:", data); // Log the data fetched
         setFearGreedData(data);
         setLoading(false);
       } catch (err) {

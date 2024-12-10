@@ -8,8 +8,6 @@ import { useUser } from '../components/hooks/useUser';
 const TransactionsPage: React.FC = () => {
   const { user, loading: userLoading, error: userError } = useUser();
   const userId = user?.id ?? null;  // Provide a fallback to null
-  console.log('User id:', userId);
-  console.log('Type of user id:', typeof userId);  // Log the type of userId
 
   if (!user) {
     return (
