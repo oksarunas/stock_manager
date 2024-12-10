@@ -22,12 +22,19 @@ root.render(
       <UserProvider>
         <RefreshProvider>
           <BrowserRouter>
-            <App />
+            <Box
+              sx={{
+                paddingBottom: "60px", // Reserve space for the bottom banner
+              }}
+            >
+              <App />
+            </Box>
           </BrowserRouter>
         </RefreshProvider>
       </UserProvider>
       {/* Festive Christmas Banner at the Bottom */}
       <Box
+        className="banner"
         sx={{
           backgroundColor: "#e57373", // Softer red
           color: "#fff",
