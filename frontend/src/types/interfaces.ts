@@ -214,3 +214,13 @@ export interface UserRegistration {
 export interface UserProfileResponse {
   user: User;
 }
+
+export type ChatMessage = {
+  sender: "user" | "bot";
+  content: string;
+};
+
+export interface ChatResponse {
+  sender: "bot";
+  content: string;
+}

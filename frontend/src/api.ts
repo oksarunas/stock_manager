@@ -293,4 +293,30 @@ export const fetchHistoricalPrices = async (
   }
 };
 
+export const sendChatMessage = async (message: string): Promise<Interfaces.ChatMessage> => {
+  try {
+      const response = await axiosInstance.post<{ content: { candidates: { content: { parts: { text: string }[] } }[] } }>(
+          "/ai/generate-answer",
+          { message }
+      );
+
+      // Extract the text field from the response
+      const botResponseText = response.data.content.candidates[0]?.content.parts[0]?.text || "No response from AI.";
+
+      return {
+          sender: "bot",
+          content: botResponseText,
+      };
+  } catch (error) {
+      console.error("Failed to send chat message:", error);
+
+      // Return a fallback ChatMessage on error
+      return {
+          sender: "bot",
+          content: "An error occurred. Please try again later.",
+      };
+  }
+};
+
+
 export default axiosInstance;

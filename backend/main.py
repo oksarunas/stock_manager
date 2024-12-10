@@ -11,6 +11,7 @@ from models import Base  # Import Base for metadata
 from fastapi.middleware.cors import CORSMiddleware
 import os
 import logging
+from ai import router as ai_router
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format="%(asctime)s [%(levelname)s] %(message)s")
@@ -123,3 +124,4 @@ app.include_router(market_router, prefix="/api/market", tags=["market"])
 app.include_router(transactions_router, prefix="/api/transactions", tags=["transactions"])
 app.include_router(performance_router, prefix="/api/performance", tags=["performance"])
 app.include_router(trades_router, prefix="/api/trades", tags=["trades"])
+app.include_router(ai_router, prefix="/api/ai", tags=["ai"])
