@@ -77,7 +77,6 @@ def save_state():
             json.dump(state, tmp_file)
             tmp_filename = tmp_file.name
         os.replace(tmp_filename, state_file)  # Atomically replace the old file
-        logging.info("Bot state saved successfully.")
     except Exception as e:
         logging.error(f"Failed to save state: {e}")
 
@@ -176,12 +175,23 @@ async def fetch_latest_data(session):
         data = await response.json()
         try:
             result = data['chart']['result'][0]
-            timestamp = result['timestamp'][-1]
-            current_time = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
-            current_price = result['indicators']['quote'][0]['close'][-1]
-            if current_price is None:
-                logging.info("No data available. Market might be closed.")
+            # Check if 'timestamp' key exists and is not empty
+            if 'timestamp' not in result or not result['timestamp']:
+                logging.info("No timestamp data available. Possibly the market is closed.")
                 return None, None
+
+            timestamp = result['timestamp'][-1]
+            quote = result['indicators']['quote'][0]
+            if 'close' not in quote or not quote['close']:
+                logging.info("No close price data available.")
+                return None, None
+
+            current_price = quote['close'][-1]
+            if current_price is None:
+                logging.info("Close price is None. Market might be closed or data unavailable.")
+                return None, None
+
+            current_time = datetime.fromtimestamp(timestamp).strftime("%Y-%m-%d %H:%M:%S")
             return Decimal(str(current_price)), current_time
         except (KeyError, IndexError, TypeError) as e:
             logging.error(f"Failed to parse data: {e}")
@@ -205,10 +215,7 @@ def cancel_outdated_buy_orders(potential_buy_prices_cents, current_time):
             buy_orders.remove(order)
             if order[0] in occupied_prices:
                 occupied_prices.remove(order[0])
-            logging.info(
-                f"Time: {current_time} - Cancelled buy limit order at ${order[0]} "
-                "as it's no longer among the 10 nearest price levels."
-            )
+
 
 def remove_unoccupied_prices(potential_buy_prices_cents, current_time):
     """Remove price levels from occupied_prices that are no longer among the 10 nearest."""
@@ -259,7 +266,6 @@ def place_buy_orders(potential_buy_prices_cents, current_price_cents, current_ti
             )
 
 async def execute_buy_orders(current_price, current_time):
-    """Execute buy orders if conditions are met."""
     global buy_orders, sell_orders, positions_dict, budget, occupied_prices, position_id_counter
 
     for order in list(buy_orders):
@@ -284,14 +290,19 @@ async def execute_buy_orders(current_price, current_time):
             )
             await log_trade(current_time, 'Buy', float(order_price), float(order_quantity), float(budget), 0.0)
 
-            # Set corresponding sell order
+            # Set corresponding sell order if not already present
             sell_price = order_price + price_increment
-            sell_orders.append((sell_price, order_quantity, pos_id))
-            occupied_prices.add(sell_price)
-            logging.info(
-                f"Time: {current_time} - Setting sell limit order at ${sell_price} "
-                f"for {order_quantity} unit(s)"
-            )
+            if not any(s[0] == sell_price for s in sell_orders):
+                sell_orders.append((sell_price, order_quantity, pos_id))
+                occupied_prices.add(sell_price)
+                logging.info(
+                    f"Time: {current_time} - Setting sell limit order at ${sell_price} "
+                    f"for {order_quantity} unit(s)"
+                )
+            else:
+                logging.info(
+                    f"Time: {current_time} - Skipping duplicate sell order at ${sell_price}."
+                )
 
             # Add a new buy order 100 points below the executed buy price
             new_buy_price = order_price - Decimal('100')
@@ -304,18 +315,14 @@ async def execute_buy_orders(current_price, current_time):
                 )
 
 
-async def execute_sell_orders(current_price, current_time):
-    """Execute sell orders if conditions are met."""
-    global sell_orders, positions_dict, budget, occupied_prices, total_profit_loss
-    for order in list(sell_orders):
-        # Ensure the order has the expected structure
-        if len(order) < 3:
-            logging.error(f"Malformed sell order encountered: {order}. Skipping.")
-            continue
 
+async def execute_sell_orders(current_price, current_time):
+    global sell_orders, positions_dict, budget, occupied_prices, total_profit_loss
+
+    for order in list(sell_orders):
         order_price = order[0]
         order_quantity = order[1]
-        pos_id = order[2]  # Ensure this is safe now
+        pos_id = order[2]
 
         if current_price >= order_price:
             # Execute the sell
@@ -342,6 +349,47 @@ async def execute_sell_orders(current_price, current_time):
                 f"for {order_quantity} unit(s). Updated budget: ${budget:.2f}, Profit/Loss: ${profit_loss:.2f}"
             )
             await log_trade(current_time, 'Sell', float(order_price), float(order_quantity), float(budget), float(profit_loss))
+
+
+def check_and_add_new_buy(current_price, current_time):
+    global buy_orders, sell_orders, positions_dict, occupied_prices, budget
+
+    highest_buy_price = max([o[0] for o in buy_orders], default=None)
+    if highest_buy_price is None:
+        return  # No buy orders placed yet
+
+    # Condition 1: Price moved away more than $10
+    if current_price > highest_buy_price + Decimal('10'):
+        # Calculate the new buy price
+        new_buy_price = (current_price // Decimal('10')) * Decimal('10')
+
+        # Check if a buy was already executed at this price level
+        if any(pos['buy_price'] == new_buy_price for pos in positions_dict.values()):
+            logging.info(
+                f"Time: {current_time} - Skipping new buy at ${new_buy_price} as it was already executed."
+            )
+            return
+
+        # Check if there's an overlapping or conflicting sell order
+        if any(
+            abs(sell_order[0] - new_buy_price) < price_increment
+            for sell_order in sell_orders
+        ):
+            logging.info(
+                f"Time: {current_time} - Skipping new buy at ${new_buy_price} "
+                "due to conflict with existing sell orders."
+            )
+            return
+
+        # Place the new buy order if all conditions are satisfied
+        if new_buy_price > 0 and new_buy_price not in occupied_prices and budget >= new_buy_price * Decimal('0.1'):
+            buy_orders.append((new_buy_price, Decimal('0.1')))
+            occupied_prices.add(new_buy_price)
+            logging.info(
+                f"Time: {current_time} - Price ran away, added new buy at ${new_buy_price}"
+            )
+
+
 
 
 def print_status(current_time, current_price):
@@ -394,8 +442,9 @@ async def main():
 
                 remove_unoccupied_prices(potential_buy_prices_cents, current_time)
                 place_buy_orders(potential_buy_prices_cents, current_price_cents, current_time)
+                check_and_add_new_buy(current_price, current_time)
                 await execute_buy_orders(current_price, current_time)
-                await execute_sell_orders(current_price, current_time)
+                await execute_sell_orders(current_price, current_time) 
 
                 print_status(current_time, current_price)
 

@@ -29,6 +29,7 @@ import FearGreed from "../pages/FearGreed";
 import Analyze from "../pages/Analyze";
 import TradingBot from "../pages/TradingBot";
 import StockPage from "../pages/StockPage";
+import Login from "../components/auth/Login";
 
 export function App() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
@@ -93,6 +94,16 @@ export function App() {
                 <Navigate to="/dashboard" replace />
               ) : (
                 <HomePage onLogin={handleLogin} />
+              )
+            }
+          />
+          <Route
+            path="/login"
+            element={
+              isAuthenticated ? (
+                <Navigate to="/dashboard" replace />
+              ) : (
+                <Login onLoginSuccess={handleLogin} /> // Update the prop name here
               )
             }
           />
