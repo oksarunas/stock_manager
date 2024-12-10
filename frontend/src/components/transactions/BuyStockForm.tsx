@@ -1,12 +1,13 @@
 import React, { useState, useContext, useEffect } from "react";
 import { RefreshContext } from "../../contexts/RefreshContext";
-import { buyStock } from "../../api";
+import { addStock } from "../../api"; // Adjust the API call if necessary
 import { useUser } from "../hooks/useUser";
 import { TextField, Button, Typography, CircularProgress, Box } from "@mui/material";
 
-const BuyStockForm: React.FC = () => {
+const AddStockForm: React.FC = () => {
   const [ticker, setTicker] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
+  const [purchasePrice, setPurchasePrice] = useState<number | null>(null); // Add purchase price field
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -24,32 +25,38 @@ const BuyStockForm: React.FC = () => {
     }
   }, [message, error]);
 
-  const handleBuy = async () => {
+  const handleAdd = async () => {
     if (!validateForm()) return;
-
+  
     setLoading(true);
     setMessage("");
     setError("");
-
+  
     try {
-      const response = await buyStock(user!.id, ticker.toUpperCase(), quantity);
+      const response = await addStock(
+        user!.id,
+        ticker.toUpperCase(),
+        quantity,
+        purchasePrice || 0 // Default to 0 if null
+      );
       if (response.success) {
-        setMessage("Stock purchased successfully.");
+        setMessage("Stock added successfully.");
         resetForm();
         triggerRefresh();
       } else {
-        setError(response.error || "Failed to buy stock.");
+        setError(response.error || "Failed to add stock.");
       }
     } catch (err: any) {
-      setError(err.message || "An error occurred while buying stock.");
+      setError(err.message || "An error occurred while adding stock.");
     } finally {
       setLoading(false);
     }
   };
+  
 
   const validateForm = (): boolean => {
     if (!user?.id) {
-      setError("User ID is required to buy stocks.");
+      setError("User ID is required to add stocks.");
       return false;
     }
     if (!ticker.trim()) {
@@ -60,12 +67,17 @@ const BuyStockForm: React.FC = () => {
       setError("Quantity must be at least 1.");
       return false;
     }
+    if (purchasePrice === null || purchasePrice <= 0) {
+      setError("Please enter a valid purchase price.");
+      return false;
+    }
     return true;
   };
 
   const resetForm = () => {
     setTicker("");
     setQuantity(1);
+    setPurchasePrice(null);
   };
 
   if (userLoading) {
@@ -114,14 +126,25 @@ const BuyStockForm: React.FC = () => {
         disabled={loading}
         inputProps={{ min: 1 }}
       />
+      <TextField
+        label="Purchase Price"
+        type="number"
+        variant="outlined"
+        fullWidth
+        value={purchasePrice || ""}
+        onChange={(e) => setPurchasePrice(Number(e.target.value))}
+        disabled={loading}
+        inputProps={{ min: 0 }}
+        placeholder="e.g., 150.00"
+      />
       <Button
-        onClick={handleBuy}
+        onClick={handleAdd}
         variant="contained"
         color="primary"
         disabled={loading}
         fullWidth
       >
-        {loading ? "Processing..." : "Buy"}
+        {loading ? "Processing..." : "Add Stock"}
       </Button>
       {message && (
         <Typography color="success.main" align="center">
@@ -137,4 +160,4 @@ const BuyStockForm: React.FC = () => {
   );
 };
 
-export default BuyStockForm;
+export default AddStockForm;

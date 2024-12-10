@@ -17,28 +17,29 @@ def round_to_two_decimals(value):
     return float(Decimal(value).quantize(Decimal("0.00"), rounding=ROUND_HALF_UP))
 
 
-@router.post("/buy", response_model=TransactionResponse)
-async def buy_stock(transaction: TransactionCreate):
+@router.post("/add", response_model=TransactionResponse)
+async def add_stock(transaction: TransactionCreate):
     """
-    Endpoint to buy a stock.
+    Endpoint to add a stock manually to the user's portfolio.
     """
+    # Validate user existence
     user_query = select(User).where(User.id == transaction.user_id)
     user = await database.fetch_one(user_query)
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    try:
-        ticker_data = yf.Ticker(transaction.ticker)
-        price_data = ticker_data.history(period="1d")
-        current_price = round_to_two_decimals(price_data["Close"].iloc[-1])  # Ensure price is rounded
-    except Exception:
-        raise HTTPException(status_code=404, detail="Could not fetch stock price")
+    # Ensure a valid purchase price is provided
+    if transaction.price is None or transaction.price <= 0:
+        raise HTTPException(status_code=400, detail="Invalid purchase price")
 
-    total_cost = round_to_two_decimals(current_price * transaction.quantity)
+    # Calculate total cost of the new stock addition
+    total_cost = round_to_two_decimals(transaction.price * transaction.quantity)
+
+    # Check if the user has sufficient budget
     if user["budget"] < total_cost:
         raise HTTPException(status_code=400, detail="Insufficient funds")
 
-    # Update user's budget
+    # Deduct the total cost from the user's budget
     new_budget = round_to_two_decimals(user["budget"] - total_cost)
     await database.execute(
         update(User).where(User.id == transaction.user_id).values(budget=new_budget)
@@ -51,6 +52,7 @@ async def buy_stock(transaction: TransactionCreate):
     existing_stock = await database.fetch_one(stock_query)
 
     if existing_stock:
+        # Update existing stock
         new_quantity = existing_stock["quantity"] + transaction.quantity
         new_total_cost = round_to_two_decimals(existing_stock["total_cost"] + total_cost)
         new_purchase_price = round_to_two_decimals(new_total_cost / new_quantity)  # Weighted average
@@ -60,23 +62,25 @@ async def buy_stock(transaction: TransactionCreate):
             .values(quantity=new_quantity, total_cost=new_total_cost, purchase_price=new_purchase_price)
         )
     else:
+        # Add a new stock to the user's portfolio
         await database.execute(
             insert(UserStock).values(
                 user_id=transaction.user_id,
                 ticker=transaction.ticker,
                 quantity=transaction.quantity,
-                purchase_price=current_price,
+                purchase_price=transaction.price,
                 total_cost=total_cost,
             )
         )
 
+    # Record the transaction in the transaction table
     transaction_id = await database.execute(
         insert(Transaction).values(
             user_id=transaction.user_id,
             ticker=transaction.ticker,
-            transaction_type="buy",
+            transaction_type="buy", 
             quantity=transaction.quantity,
-            price=current_price,
+            price=transaction.price,
             total_cost=total_cost,
             timestamp=datetime.utcnow(),
         )
@@ -88,13 +92,14 @@ async def buy_stock(transaction: TransactionCreate):
         ticker=transaction.ticker,
         transaction_type="buy",
         quantity=transaction.quantity,
-        price=current_price,
+        price=transaction.price,
         total_cost=total_cost,
         timestamp=datetime.utcnow(),
     )
 
 
-@router.post("/sell", response_model=TransactionResponse)
+
+@router.post("/remove", response_model=TransactionResponse)
 async def sell_stock(transaction: TransactionCreate):
     """
     Endpoint to sell a stock.
@@ -104,13 +109,6 @@ async def sell_stock(transaction: TransactionCreate):
     if user is None:
         raise HTTPException(status_code=404, detail="User not found")
 
-    try:
-        ticker_data = yf.Ticker(transaction.ticker)
-        price_data = ticker_data.history(period="1d")
-        current_price = round_to_two_decimals(price_data["Close"].iloc[-1])  # Ensure price is rounded
-    except Exception:
-        raise HTTPException(status_code=404, detail="Could not fetch stock price")
-
     stock_query = select(UserStock).where(
         (UserStock.user_id == transaction.user_id) & (UserStock.ticker == transaction.ticker)
     )
@@ -119,7 +117,11 @@ async def sell_stock(transaction: TransactionCreate):
     if not existing_stock or existing_stock["quantity"] < transaction.quantity:
         raise HTTPException(status_code=400, detail="Not enough shares to sell")
 
-    total_sale_value = round_to_two_decimals(current_price * transaction.quantity)
+    # Validate the provided selling price
+    if transaction.price <= 0:
+        raise HTTPException(status_code=400, detail="Invalid selling price provided")
+
+    total_sale_value = round_to_two_decimals(transaction.price * transaction.quantity)
 
     # Update user's budget
     new_budget = round_to_two_decimals(user["budget"] + total_sale_value)
@@ -150,7 +152,7 @@ async def sell_stock(transaction: TransactionCreate):
             ticker=transaction.ticker,
             transaction_type="sell",
             quantity=transaction.quantity,
-            price=current_price,
+            price=transaction.price,  # Use the price provided by the user
             total_cost=total_sale_value,
             timestamp=datetime.utcnow(),
         )
@@ -162,10 +164,11 @@ async def sell_stock(transaction: TransactionCreate):
         ticker=transaction.ticker,
         transaction_type="sell",
         quantity=transaction.quantity,
-        price=current_price,
+        price=transaction.price,  # Return the user's provided price
         total_cost=total_sale_value,
         timestamp=datetime.utcnow(),
     )
+
 
 
 @router.get("/{user_id}", response_model=List[TransactionResponse])

@@ -101,41 +101,48 @@ export const fetchPortfolioPerformance = async (
 
 
 // Stock transaction functions
-export const buyStock = async (
+export const addStock = async (
   userId: number,
-  ticker: string, 
-  quantity: number
+  ticker: string,
+  quantity: number,
+  purchasePrice: number
 ): Promise<Interfaces.ApiResponse<Interfaces.TransactionResponse>> => {
   try {
-    const transaction: Interfaces.TransactionRequest = {
+    const stock: Interfaces.TransactionRequest = {
       user_id: userId,
       ticker,
       quantity,
       transaction_type: 'buy',
-      price: 0
+      price: purchasePrice,
     };
-    
-    const response = await axiosInstance.post<Interfaces.TransactionResponse>('/transactions/buy', transaction);
+
+    const response = await axiosInstance.post<Interfaces.TransactionResponse>('/transactions/add', stock);
     return { success: true, data: response.data, error: null };
   } catch (error) {
     return handleError(error);
   }
 };
 
-export const sellStock = async (
+
+export const removeStock = async (
   userId: number,
-  ticker: string, 
-  quantity: number
+  ticker: string,
+  quantity: number,
+  price: number // Added price
 ): Promise<Interfaces.ApiResponse<Interfaces.TransactionResponse>> => {
   try {
-    const transaction: Interfaces.TransactionRequest = {
+    const stock: Interfaces.TransactionRequest = {
       user_id: userId,
       ticker,
       quantity,
-      transaction_type: 'sell'
+      transaction_type: "sell",
+      price, // Include price in the payload
     };
-    
-    const response = await axiosInstance.post<Interfaces.TransactionResponse>('/transactions/sell', transaction);
+
+    const response = await axiosInstance.post<Interfaces.TransactionResponse>(
+      "/transactions/remove",
+      stock
+    );
     return { success: true, data: response.data, error: null };
   } catch (error) {
     return handleError(error);

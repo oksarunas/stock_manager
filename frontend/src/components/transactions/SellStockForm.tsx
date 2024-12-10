@@ -1,13 +1,14 @@
 import React, { useEffect, useState, useContext } from "react";
-import { viewPortfolio, sellStock } from "../../api";
+import { viewPortfolio, removeStock } from "../../api"; // Update the API call
 import { RefreshContext } from "../../contexts/RefreshContext";
 import { useUser } from "../hooks/useUser";
 import { Box, Button, Typography, TextField, CircularProgress } from "@mui/material";
 
-const SellStockForm: React.FC = () => {
+const RemoveStockForm: React.FC = () => {
   const [userStocks, setUserStocks] = useState<{ ticker: string; quantity: number }[]>([]);
   const [ticker, setTicker] = useState<string>("");
   const [quantity, setQuantity] = useState<number>(1);
+  const [price, setPrice] = useState<number | null>(null); // Add price state
   const [message, setMessage] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [loading, setLoading] = useState<boolean>(false);
@@ -49,23 +50,23 @@ const SellStockForm: React.FC = () => {
     }
   }, [message, error]);
 
-  const handleSell = async () => {
+  const handleRemove = async () => {
     if (!validateForm()) return;
 
     setLoading(true);
     setError("");
 
     try {
-      const response = await sellStock(user!.id, ticker, quantity);
+      const response = await removeStock(user!.id, ticker.toUpperCase(), quantity, price!); // Include price
       if (response.success) {
-        setMessage("Stock sold successfully!");
+        setMessage("Stock removed successfully!");
         resetForm();
         triggerRefresh();
       } else {
-        setError("Failed to sell stock.");
+        setError("Failed to remove stock.");
       }
     } catch (err) {
-      setError("An error occurred while selling stock.");
+      setError("An error occurred while removing stock.");
       console.error(err);
     } finally {
       setLoading(false);
@@ -77,13 +78,17 @@ const SellStockForm: React.FC = () => {
       setError("Please enter a valid ticker symbol.");
       return false;
     }
-    const stock = userStocks.find((s) => s.ticker === ticker);
+    const stock = userStocks.find((s) => s.ticker.toUpperCase() === ticker.toUpperCase());
     if (!stock || quantity > stock.quantity) {
-      setError("Insufficient stock quantity to sell.");
+      setError("Insufficient stock quantity to remove.");
       return false;
     }
     if (quantity <= 0) {
       setError("Quantity must be at least 1.");
+      return false;
+    }
+    if (price === null || price <= 0) {
+      setError("Please enter a valid selling price.");
       return false;
     }
     return true;
@@ -92,6 +97,7 @@ const SellStockForm: React.FC = () => {
   const resetForm = () => {
     setTicker("");
     setQuantity(1);
+    setPrice(null); // Reset price
   };
 
   if (userLoading) {
@@ -140,14 +146,25 @@ const SellStockForm: React.FC = () => {
         disabled={loading}
         inputProps={{ min: 1 }}
       />
+      <TextField
+        label="Selling Price"
+        type="number"
+        variant="outlined"
+        fullWidth
+        value={price || ""}
+        onChange={(e) => setPrice(Number(e.target.value))}
+        disabled={loading}
+        inputProps={{ min: 0 }}
+        placeholder="e.g., 150.00"
+      />
       <Button
-        onClick={handleSell}
+        onClick={handleRemove}
         variant="contained"
         color="error"
         disabled={loading}
         fullWidth
       >
-        {loading ? "Processing..." : "Sell"}
+        {loading ? "Processing..." : "Remove"}
       </Button>
       {message && (
         <Typography color="success.main" align="center">
@@ -163,4 +180,4 @@ const SellStockForm: React.FC = () => {
   );
 };
 
-export default SellStockForm;
+export default RemoveStockForm;

@@ -61,6 +61,7 @@ class PortfolioResponse(BaseModel):
 # ========== Transaction-Related Schemas ==========
 
 class TransactionCreate(BaseModel):
+    user_id: int  # Include user_id
     ticker: str = Field(..., min_length=1, max_length=5, pattern=r"^[A-Z]+$")
     transaction_type: Literal["buy", "sell"]
     quantity: int = Field(..., gt=0)
