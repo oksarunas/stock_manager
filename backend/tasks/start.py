@@ -1,3 +1,4 @@
+#start.py
 import asyncio
 import logging
 from tasks.sync_stocks import sync_stocks_with_user_stocks
