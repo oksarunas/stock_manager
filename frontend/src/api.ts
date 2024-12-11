@@ -295,13 +295,15 @@ export const fetchHistoricalPrices = async (
 
 export const sendChatMessage = async (message: string): Promise<Interfaces.ChatMessage> => {
   try {
-      const response = await axiosInstance.post<{ content: { candidates: { content: { parts: { text: string }[] } }[] } }>(
+      const response = await axiosInstance.post<{ content: string }>(
           "/ai/generate-answer",
           { message }
       );
 
-      // Extract the text field from the response
-      const botResponseText = response.data.content.candidates[0]?.content.parts[0]?.text || "No response from AI.";
+      console.log("API Response:", response.data);
+
+      // Extract the content field
+      const botResponseText = response.data.content || "No response from AI.";
 
       return {
           sender: "bot",
@@ -317,6 +319,9 @@ export const sendChatMessage = async (message: string): Promise<Interfaces.ChatM
       };
   }
 };
+
+
+
 
 
 export default axiosInstance;

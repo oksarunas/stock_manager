@@ -26,7 +26,7 @@ const Chat: React.FC<ChatProps> = ({ title = "Chat", onSend }) => {
 
     setInput('');
   };
-
+  
   return (
     <div className="chat-container">
       <h2 className="text-xl font-semibold mb-2 text-center text-accent">{title}</h2>

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 import httpx
 import os
@@ -41,50 +41,46 @@ async def validate_config():
 
 @router.post("/generate-answer", summary="Generate AI content", description="Uses Gemini API to generate text based on a given prompt.")
 @limiter.limit("10/minute")  # Limit to 10 requests per minute
-async def generate_content(request: MessageRequest):
+async def generate_content(request: Request, message_request: MessageRequest):
     """
     Generate content using the Gemini 1.5 Flash API.
-    :param request: The input text prompt for the AI.
+    :param request: The incoming HTTP request object (used by slowapi).
+    :param message_request: The input text prompt for the AI.
     :return: Generated content from the API.
     """
     headers = {"Content-Type": "application/json"}
     payload = {
         "contents": [
-            {"parts": [{"text": request.message}]}
+            {"parts": [{"text": message_request.message}]}
         ]
     }
 
-    logging.info(f"Received request: {request.message}")
+    logging.info(f"Received request: {message_request.message}")
 
     try:
         async with httpx.AsyncClient() as client:
             response = await client.post(
-                f"{GEMINI_API_URL}?key={API_KEY}", 
-                json=payload, 
+                f"{GEMINI_API_URL}?key={API_KEY}",
+                json=payload,
                 headers=headers
             )
             response_data = response.json()
 
-        # Log the raw response for debugging
         logging.info(f"Gemini API response: {response_data}")
 
-        # Check for errors in the response
         if response.status_code != 200:
             error_message = response_data.get("error", {}).get("message", "Unknown error")
             logging.error(f"Error from Gemini API: {error_message}")
-            raise HTTPException(
-                status_code=response.status_code,
-                detail=error_message
-            )
+            raise HTTPException(status_code=response.status_code, detail=error_message)
 
-        response_text = (
-            response_data.get("content", {})
-            .get("candidates", [{}])[0]
-            .get("parts", [{}])[0]
-            .get("text", "No meaningful response received.")
-        )
+        # Extract the generated text
+        candidates = response_data.get("candidates", [])
+        if candidates and candidates[0].get("content") and candidates[0]["content"].get("parts"):
+            generated_text = candidates[0]["content"]["parts"][0]["text"]
+        else:
+            generated_text = "No meaningful response received."
 
-        return {"content": response_text}
+        return {"content": generated_text}
     except Exception as e:
         logging.exception("Error communicating with the Gemini API")
         raise HTTPException(status_code=500, detail=f"Error communicating with the Gemini API: {str(e)}")

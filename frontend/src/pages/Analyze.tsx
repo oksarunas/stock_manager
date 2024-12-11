@@ -170,17 +170,6 @@ const Analyze: React.FC = () => {
                 </div>
             </div>
 
-            <div className="mb-8 w-full md:w-1/2 mx-auto">
-                <h2 className="text-xl font-semibold mb-2 text-center">Suggestions</h2>
-                <ul className="list-disc pl-5 text-left">
-                    {state.suggestions.map((suggestion, index) => (
-                        <li key={index} className="mb-2">
-                            {suggestion}
-                        </li>
-                    ))}
-                </ul>
-            </div>
-
             <Chat title="Portfolio Chat" onSend={handleChatSend} />
         </div>
     );
