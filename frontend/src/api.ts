@@ -295,9 +295,16 @@ export const fetchHistoricalPrices = async (
 
 export const sendChatMessage = async (message: string): Promise<Interfaces.ChatMessage> => {
   try {
+      // Retrieve user_id from localStorage or another source
+      const userId = localStorage.getItem("user_id");
+      if (!userId) {
+          throw new Error("User ID is required but not found.");
+      }
+
+      // Send the request with the user_id as a query parameter
       const response = await axiosInstance.post<{ content: string }>(
-          "/ai/generate-answer",
-          { message }
+          `/ai/generate-answer?user_id=${userId}`,
+          { message } // Send the message in the request body
       );
 
       console.log("API Response:", response.data);

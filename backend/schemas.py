@@ -153,3 +153,7 @@ class ApiResponse(BaseModel):
     success: bool
     data: Optional[Union[dict, list, str]]  # Adjusted for flexibility
     error: Optional[str]
+
+
+class MessageRequest(BaseModel):
+    message: str
