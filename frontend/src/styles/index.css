@@ -128,7 +128,7 @@ a {
 /* Footer */
 footer {
   @apply bg-accent text-white text-center py-4;
-  background: linear-gradient(90deg, #e57373, #81c784);
+  background: #028a06;
   box-shadow: 0 -4px 6px rgba(0, 0, 0, 0.1);
 }
 
