@@ -252,9 +252,6 @@ def place_buy_orders(potential_buy_prices_cents, current_price_cents, current_ti
             if lowest_sell is not None:
                 # If new buy would be >= (lowest_sell - 10), skip
                 if buy_price >= (lowest_sell - Decimal('10')):
-                    logging.info(
-                        f"Time: {current_time} - Skipping new buy at ${buy_price} since it's too close to sell orders."
-                    )
                     continue
 
             quantity = Decimal('0.1')
@@ -365,9 +362,6 @@ def check_and_add_new_buy(current_price, current_time):
 
         # Check if a buy was already executed at this price level
         if any(pos['buy_price'] == new_buy_price for pos in positions_dict.values()):
-            logging.info(
-                f"Time: {current_time} - Skipping new buy at ${new_buy_price} as it was already executed."
-            )
             return
 
         # Check if there's an overlapping or conflicting sell order
