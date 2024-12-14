@@ -35,6 +35,7 @@ class StockResponse(BaseModel):
 # ========== Portfolio-Related Schemas ==========
 
 class StockAddRequest(BaseModel):
+    user_id: int
     ticker: str = Field(..., min_length=1, max_length=5, pattern=r"^[A-Z]+$")
     quantity: int = Field(..., gt=0)
     purchase_price: float = Field(..., ge=0)
