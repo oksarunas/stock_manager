@@ -165,5 +165,3 @@ This project is open-source under the MIT License.
     React
     TailwindCSS
     Gemini Language Model API
-
-This README structure ensures your project is professional, clear, and appealing to anyone visiting your GitHub repository. Let me know if you'd like help customizing any section further! 🚀
