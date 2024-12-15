@@ -33,7 +33,55 @@ Others
 
 # Project Structure
 
-stock_manager/ │ ├── backend/ # Backend logic and API server │ ├── alembic/ # Alembic for database migrations │ │ ├── versions/ # Database migration scripts │ │ └── env.py # Alembic environment configuration │ ├── tasks/ # Background task scripts │ │ ├── daily.py # Daily tasks for data processing │ │ ├── sync_stocks.py # Synchronizes stock data │ │ └── update_prices.py # Updates stock prices │ ├── ai.py # AI-related logic for stock suggestions │ ├── bot.py # Trading bot functionality │ ├── database.py # Database connection setup │ ├── fear_greed.py # Logic for Fear & Greed Index scraping │ ├── main.py # Entry point for the backend server │ ├── market.py # Endpoints for market data │ ├── models.py # SQLAlchemy database models │ ├── performance.py # Portfolio performance calculations │ ├── portfolio.py # Portfolio management endpoints │ ├── schemas.py # Pydantic models for validation │ ├── transactions.py # Transaction management logic │ ├── users.py # User authentication and management │ └── stock_manager.db # SQLite database │ ├── frontend/ # Frontend logic and React application │ ├── src/ # Main source code for React │ │ ├── components/ # Reusable React components │ │ │ ├── auth/ # Authentication-related components │ │ │ ├── dashboard/ # Dashboard components │ │ │ ├── hooks/ # Custom React hooks │ │ │ ├── tradingbot/ # Components for the trading bot page │ │ │ ├── transactions/ # Components for transactions page │ │ │ ├── Chat.tsx # AI chat interface component │ │ │ └── MarketUpdates.tsx # Component for market updates │ │ ├── contexts/ # React context for global state management │ │ ├── pages/ # Page-level components for routing │ │ ├── routes/ # Route definitions │ │ ├── styles/ # Global styles and CSS │ │ ├── types/ # TypeScript type definitions │ │ └── ui/ # Shared UI components │ ├── public/ # Public assets │ ├── package.json # Frontend dependencies │ ├── tailwind.config.js # TailwindCSS configuration │ ├── tsconfig.json # TypeScript configuration │ └── README.md # Frontend README file (optional) │ ├── core/ # Core configurations or shared logic (if applicable) ├── .gitignore # Git ignore rules ├── README.md # Main README for the project ├── requirements.txt # Python dependencies └── certificates/ # SSL certificates for HTTPS (if used)
+- stock_manager/
+  - backend/ # Backend logic and API server
+    - alembic/ # Alembic for database migrations
+      - versions/ # Database migration scripts
+      - env.py # Alembic environment configuration
+    - tasks/ # Background task scripts
+      - daily.py # Daily tasks for data processing
+      - sync_stocks.py # Synchronizes stock data
+      - update_prices.py # Updates stock prices
+    - ai.py # AI-related logic for stock suggestions
+    - bot.py # Trading bot functionality
+    - database.py # Database connection setup
+    - fear_greed.py # Logic for Fear & Greed Index scraping
+    - main.py # Entry point for the backend server
+    - market.py # Endpoints for market data
+    - models.py # SQLAlchemy database models
+    - performance.py # Portfolio performance calculations
+    - portfolio.py # Portfolio management endpoints
+    - schemas.py # Pydantic models for validation
+    - transactions.py # Transaction management logic
+    - users.py # User authentication and management
+    - stock_manager.db # SQLite database
+  - frontend/ # Frontend logic and React application
+    - src/ # Main source code for React
+      - components/ # Reusable React components
+        - auth/ # Authentication-related components
+        - dashboard/ # Dashboard components
+        - hooks/ # Custom React hooks
+        - tradingbot/ # Components for the trading bot page
+        - transactions/ # Components for transactions page
+        - Chat.tsx # AI chat interface component
+        - MarketUpdates.tsx # Component for market updates
+      - contexts/ # React context for global state management
+      - pages/ # Page-level components for routing
+      - routes/ # Route definitions
+      - styles/ # Global styles and CSS
+      - types/ # TypeScript type definitions
+      - ui/ # Shared UI components
+    - public/ # Public assets
+    - package.json # Frontend dependencies
+    - tailwind.config.js # TailwindCSS configuration
+    - tsconfig.json # TypeScript configuration
+    - README.md # Frontend README file (optional)
+  - core/ # Core configurations or shared logic (if applicable)
+  - .gitignore # Git ignore rules
+  - README.md # Main README for the project
+  - requirements.txt # Python dependencies
+  - certificates/ # SSL certificates for HTTPS (if used)
+
 
 
 🔧 Setup Instructions
