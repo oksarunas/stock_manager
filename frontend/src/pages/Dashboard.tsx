@@ -128,7 +128,7 @@ const Dashboard: React.FC = () => {
         borderColor: "rgba(75, 192, 192, 1)",
         backgroundColor: "rgba(75, 192, 192, 0.2)",
         tension: 0.4,
-        fill: true,
+        fill: false,
       },
     ],
   };
@@ -187,7 +187,7 @@ const Dashboard: React.FC = () => {
             <Typography variant="h6" fontWeight="bold" gutterBottom>
               Portfolio Value Trend
             </Typography>
-            <Box sx={{ height: 300 }}>
+            <Box sx={{ position: 'relative',  minHeight: '200px', width: '100%'}}>
               {filteredTrendData.length > 0 ? (
                 <Line data={chartData} />
               ) : (
