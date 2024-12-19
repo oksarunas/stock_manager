@@ -256,6 +256,17 @@ export const fetchTrades = async (
   }
 };
 
+export const fetchProfitLoss = async () => {
+  try {
+    const response = await axios.get("/api/trades?chart_data=true");
+    return response.data; // { success: true, data: [...] }
+  } catch (error) {
+    console.error("Error fetching profit/loss data:", error);
+    return { success: false, error: "Failed to fetch profit/loss data" };
+  }
+};
+
+
 // Fetch trade summary
 export const fetchTradeSummary = async (): Promise<Interfaces.ApiResponse<Interfaces.TradeSummary>> => {
   try {
